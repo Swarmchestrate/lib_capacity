@@ -9,28 +9,53 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-class CapacityRegistry:
-    """Represents a capacity registry.
+def Initialize(init_capacity: dict):
+    """Initializes the capacity registry.
+
+    Args:
+        init_capacity (dict): A dictionary containing different resource types, eg.: disk, RAM, CPU etc.
+    """
+
+    # TO-DO: include example for usage in documentation
     
-    The capacity registry handles tasks related to different capacity types (e.g. vCPU, RAM, disk, etc.).
-    Tasks include reserving, freeing, freezing, etc. of the different capacity types.
+    logger.info('Initializing capacity registry...')
+
+    with open("capreg.yaml", "w") as file:
+        try:
+            file.write( yaml.dump(init_capacity) )
+        except yaml.YAMLError as exception:
+            print(exception)
+            logging.error("An error has occured!")
+            # TO-DO: error handling
+        
+    logger.info('Successfully initialized capacity registry!')
+
+def ReadCapacityRegistry():
+    """Reads the capacity registry.
     """
     
-    def __init__(self):
-        """Initializes a CapacityRegistry instance.
-        
-        The constructor relies on the "init.yaml" file, which stores the available initial capacity.
-        The constructor reads "init.yaml", and initializes the capacity according to it.
-        """
+    capacity_registry = {}
 
-        self.capacity = {}
+    with open("capreg.yaml", "r") as file:
+        try:
+            capacity_registry = yaml.safe_load( file )
+        except yaml.YAMLError as exception:
+            print(exception)
+            logging.error("An error has occured!")
+            # TO-DO: error handling
+    
+    logger.info('Loaded capacity registry.')
 
-        logger.info('Initializing capacity registry...')
+    return capacity_registry
 
-        with open("init.yaml", "r") as file:
-            try:
-                self.capacity = yaml.safe_load(file)
-            except yaml.YAMLError as exception:
-                print(exception)
-        
-        logger.info('Successfully initialized capacity registry!')
+def ListCurrentCapacity():
+    """Lists the currently available capacity.
+    """
+
+    # TO-DO: pretty print
+
+    capacity_registry = ReadCapacityRegistry()
+
+    logger.info('Listing all resource capacities.')
+
+    print(capacity_registry)
