@@ -33,6 +33,7 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     logger.info('Initializing capacity registry...')
 
     # TO-DO: dict key check
+    # TO-DO: dict values check
 
     capacity = {
         "initial": {},
