@@ -78,23 +78,23 @@ def SummarizeAllReservations():
 
     total_reservations = {"raw": {}, "flavor": {}}
 
-    reservations = capacity["reservations"]
-    
-    for act_reservation in reservations:
+    res_ids = capacity["reservations"].keys()
 
-        for res_data in act_reservation.values():
+    for act_res_id in res_ids:
 
-            for res_main_type, res_reources in res_data.items():
+        act_res = capacity["reservations"][act_res_id]
+
+        for res_main_type, res_reources in act_res.items():
                 
-                if res_main_type == "raw":
+            if res_main_type == "raw":
                     
-                    for res_sub_type, res_amount in res_reources.items():
-                        # TO-DO: count reserved IP addresses
+                for res_sub_type, res_amount in res_reources.items():
+                    # TO-DO: count reserved IP addresses
 
-                        try:
-                            total_reservations["raw"][res_sub_type] += res_amount
-                        except KeyError:
-                            total_reservations["raw"][res_sub_type] = res_amount
+                    try:
+                        total_reservations["raw"][res_sub_type] += res_amount
+                    except KeyError:
+                        total_reservations["raw"][res_sub_type] = res_amount
     
     return total_reservations
             
@@ -112,12 +112,12 @@ def MakeReservation(reservation: dict):
     for reservation_type in reservation.keys():
         print(reservation_type)
 
-    reservation = {
-        reservation_uuid: reservation
-        }
+    #reservation = {
+    #    reservation_uuid: reservation
+    #    }
 
     # if ...
-    capacity["reservations"].append(reservation)
+    capacity["reservations"][reservation_uuid] = reservation
 
     # Check if reservation can be made
     # If it can be made, make the reservation and return (True, reservation_uuid)
