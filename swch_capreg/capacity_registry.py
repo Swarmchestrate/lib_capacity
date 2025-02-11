@@ -9,26 +9,38 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-def Initialize(init_capacity: dict):
-    """Initializes the capacity registry.
+def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
 
-    Args:
-        init_capacity (dict): A dictionary containing different resource types, eg.: disk, RAM, CPU etc.
-    """
 
     # TO-DO: include example for usage in documentation
+    # TO-DO: include option to init from yaml file
+
+    if (raw_capacity == None and flavor_capacity == None):
+        logger.error("No initial capacity defined. Please define initial resources!")
+        return False
     
     logger.info('Initializing capacity registry...')
 
+    capacity = {
+        "initial": {},
+        "reserved": []
+        }
+    capacity["initial"]["raw"] = raw_capacity
+    capacity["initial"]["flavor"] = flavor_capacity
+    capacity["reserved"] = []
+
     with open("capreg.yaml", "w") as file:
         try:
-            file.write( yaml.dump(init_capacity) )
+            file.write( yaml.dump(capacity) )
         except yaml.YAMLError as exception:
             print(exception)
             logging.error("An error has occured!")
             # TO-DO: error handling
+
+            return False
         
     logger.info('Successfully initialized capacity registry!')
+    return True
 
 def ReadCapacityRegistry():
     """Reads the capacity registry.
