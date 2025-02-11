@@ -41,7 +41,7 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
         }
     capacity["initial"]["raw"] = raw_capacity
     capacity["initial"]["flavor"] = flavor_capacity
-    capacity["reserved"] = []
+    capacity["reservations"] = []
 
     # TO-DO: ask for permission to reinitialize
     with open("capreg.yaml", "w") as file:
