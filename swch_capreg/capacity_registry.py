@@ -31,6 +31,8 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     
     logger.info('Initializing capacity registry...')
 
+    # TO-DO: dict key check
+
     capacity = {
         "initial": {},
         "reserved": []
@@ -39,6 +41,7 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     capacity["initial"]["flavor"] = flavor_capacity
     capacity["reserved"] = []
 
+    # TO-DO: ask for permission to reinitialize
     with open("capreg.yaml", "w") as file:
         try:
             file.write( yaml.dump(capacity) )
