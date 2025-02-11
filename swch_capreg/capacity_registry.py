@@ -78,6 +78,21 @@ def ReadCapacityRegistry():
 
     return capacity
 
+def SaveCapacityRegistry(capacity: dict):
+    # TO-DO: function documentation
+    # TO-DO: dict key check
+    # TO-DO: dict value check
+    
+    with open("capreg.yaml", "w") as file:
+        try:
+            file.write( yaml.dump(capacity) )
+        except yaml.YAMLError as exception:
+            print(exception)
+            logging.error("An error has occured!")
+            # TO-DO: error handling
+
+            return False
+
 def ListCurrentCapacity():
     """Lists the currently available capacity to the console.
     """
