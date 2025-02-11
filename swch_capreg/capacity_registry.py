@@ -165,18 +165,14 @@ def ListCurrentCapacity():
 
     capacity = ReadCapacityRegistry()
 
-    logger.info('Listing all resource capacities.\r\n')
+    logger.info('Listing all resource capacities.')
 
-    total_reserved = {}
+    total_reserved = SummarizeAllReservations()
 
-    # TO-DO: summarize reservations
-    for act_reservation in capacity["reserved"]:
-        pass
-
-    print("\tType\t\tAll\tReserved\t(% reserved)")
+    print("\r\n\tType\t\tAll\tReserved\t(% reserved)")
     
     for act_resource_type, act_resource_amount in capacity["initial"]["raw"].items():
         if (act_resource_type != 'pub_ip'):
-            print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}')
+            print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}')
         else:
-            print(f'\tPub.IP\t\t{ len(act_resource_amount) }')
+            print(f'\tPub.IP\t\t{ len(act_resource_amount["pub_ips"]) }')
