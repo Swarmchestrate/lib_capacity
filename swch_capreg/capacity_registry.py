@@ -57,8 +57,66 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     logger.info('Successfully initialized capacity registry!')
     return True
 
-def MakeReservation():
-    pass
+def SummarizeAllReservations():
+    """Summarizes all reserved resources.
+
+    Returns:
+        dict: A dictionary of the overall amount of reserved resources. Contains the reserved amount of raw and flavor type resources.
+    """
+    
+    # TO-DO: function documentation
+
+    capacity = ReadCapacityRegistry()
+
+    total_reservations = {"raw": {}, "flavor": {}}
+
+    reservations = capacity["reservations"]
+    
+    for act_reservation in reservations:
+
+        for res_data in act_reservation.values():
+
+            for res_main_type, res_reources in res_data.items():
+                
+                if res_main_type == "raw":
+                    
+                    for res_sub_type, res_amount in res_reources.items():
+                        # TO-DO: count reserved IP addresses
+
+                        try:
+                            total_reservations["raw"][res_sub_type] += res_amount
+                        except KeyError:
+                            total_reservations["raw"][res_sub_type] = res_amount
+    
+    return total_reservations
+            
+def MakeReservation(reservation: dict):
+    
+    # TO-DO: function documentation
+    # TO-DO: dict key check
+    # TO-DO: dict value check
+    reservation_uuid = str( uuid.uuid4() )
+
+    capacity = ReadCapacityRegistry()
+
+    can_be_reserved = True
+
+    for reservation_type in reservation.keys():
+        print(reservation_type)
+
+    reservation = {
+        reservation_uuid: reservation
+        }
+
+    # if ...
+    capacity["reservations"].append(reservation)
+
+    # Check if reservation can be made
+    # If it can be made, make the reservation and return (True, reservation_uuid)
+    # If it cannot be made, return (False, None)
+
+    SaveCapacityRegistry(capacity)
+    
 
 def ReadCapacityRegistry():
     """Reads the capacity registry.
