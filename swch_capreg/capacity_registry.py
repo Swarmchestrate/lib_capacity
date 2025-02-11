@@ -10,7 +10,17 @@ logging.basicConfig(
     )
 
 def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
+    """Initializes a capacity registry file with the given initial resources.
 
+    IMPORTANT: at least one initial resource parameter is required.
+
+    Args:
+        raw_capacity (dict, optional): A dictionary containing raw resource types (eg.: disk, CPU, RAM, floating IPs etc.). Defaults to None.
+        flavor_capacity (dict, optional): A dictionary containing VM resource types (eg.: m1.medium, l1.large, s1.small etc.). Defaults to None.
+
+    Returns:
+        bool: True if the initialization was successful, otherwise, False.
+    """
 
     # TO-DO: include example for usage in documentation
     # TO-DO: include option to init from yaml file
@@ -46,11 +56,11 @@ def ReadCapacityRegistry():
     """Reads the capacity registry.
     """
     
-    capacity_registry = {}
+    capacity = {}
 
     with open("capreg.yaml", "r") as file:
         try:
-            capacity_registry = yaml.safe_load( file )
+            capacity = yaml.safe_load( file )
         except yaml.YAMLError as exception:
             print(exception)
             logging.error("An error has occured!")
@@ -58,7 +68,7 @@ def ReadCapacityRegistry():
     
     logger.info('Loaded capacity registry.')
 
-    return capacity_registry
+    return capacity
 
 def ListCurrentCapacity():
     """Lists the currently available capacity.
