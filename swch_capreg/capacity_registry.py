@@ -37,11 +37,19 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
 
     capacity = {
         "initial": {},
-        "reserved": []
+        "reservations": {}
         }
+    
     capacity["initial"]["raw"] = raw_capacity
     capacity["initial"]["flavor"] = flavor_capacity
-    capacity["reservations"] = []
+
+    if "pub_ip" in capacity["initial"]["raw"].keys():
+        pub_ips = {
+            "pub_ips": raw_capacity["pub_ip"],
+            "amount": len( raw_capacity["pub_ip"] )
+            }
+
+        capacity["initial"]["raw"]["pub_ip"] = pub_ips
 
     # TO-DO: ask for permission to reinitialize
     with open("capreg.yaml", "w") as file:
