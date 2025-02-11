@@ -1,4 +1,5 @@
 import logging
+import uuid
 import yaml
 
 # Logger configuration
