@@ -119,7 +119,7 @@ def MakeReservation(reservation: dict):
     
 
 def ReadCapacityRegistry():
-    """Reads the capacity registry.
+    """Reads the capacity registry file.
     """
     
     capacity = {}
