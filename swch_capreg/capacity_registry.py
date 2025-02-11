@@ -74,7 +74,7 @@ def ReadCapacityRegistry():
     return capacity
 
 def ListCurrentCapacity():
-    """Lists the currently available capacity.
+    """Lists the currently available capacity to the console.
     """
 
     # TO-DO: pretty print
