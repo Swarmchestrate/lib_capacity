@@ -52,6 +52,9 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     logger.info('Successfully initialized capacity registry!')
     return True
 
+def MakeReservation():
+    pass
+
 def ReadCapacityRegistry():
     """Reads the capacity registry.
     """
