@@ -13,7 +13,7 @@ logging.basicConfig(
 def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     """Initializes a capacity registry file with the given initial resources.
 
-    IMPORTANT: at least one initial resource parameter is required.
+    IMPORTANT: at least one initial resource type dictionary is required.
 
     Args:
         raw_capacity (dict, optional): A dictionary containing raw resource types (eg.: disk, CPU, RAM, floating IPs etc.). Defaults to None.
