@@ -34,6 +34,7 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
 
     # TO-DO: dict values check
 
+    # TO-DO: separate into constant
     # List of raw resource type keys: CPU, RAM, DISK, Public IP (list may change and expand)
     raw_resource_keys = ['cpu', 'ram', 'disk', 'pub_ip']
 
@@ -81,7 +82,10 @@ def SummarizeAllReservations():
 
     capacity = ReadCapacityRegistry()
 
-    total_reservations = {"raw": {}, "flavor": {}}
+    total_reservations = {
+        "raw": {},
+        "flavor": {}
+        }
 
     res_ids = capacity["reservations"].keys()
 
@@ -94,8 +98,6 @@ def SummarizeAllReservations():
             if res_main_type == "raw":
                     
                 for res_sub_type, res_amount in res_reources.items():
-                    # TO-DO: count reserved IP addresses
-
                     try:
                         total_reservations["raw"][res_sub_type] += res_amount
                     except KeyError:
@@ -174,10 +176,10 @@ def ListCurrentCapacity():
 
     total_reserved = SummarizeAllReservations()
 
-    print("\r\n\tType\t\tAll\tReserved\t(% reserved)")
+    print("\r\n\tType\tAll\tReserv.\t(% reserved)")
     
     for act_resource_type, act_resource_amount in capacity["initial"]["raw"].items():
-        if (act_resource_type != 'pub_ip'):
-            print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}')
-        else:
-            print(f'\tPub.IP\t\t{ len(act_resource_amount["pub_ips"]) }')
+        try:
+            print(f'\t{act_resource_type.upper()}\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}')
+        except KeyError:
+            print(f'\t{act_resource_type.upper()}\t{act_resource_amount}\t0\t0')
