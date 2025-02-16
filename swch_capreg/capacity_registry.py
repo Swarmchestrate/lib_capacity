@@ -227,12 +227,13 @@ def ListCurrentCapacity():
 
     logger.info('Listing all resource capacities.')
 
-    total_reserved = SummarizeAllReservations()
+    total_reserved = SummarizeAllReservations(capacity)
 
-    print("\r\n\tType\tAll\tReserv.\t(% reserved)")
+    print("\r\n\tType\tAll\tReserv.\t(% free)")
     
     for act_resource_type, act_resource_amount in capacity["initial"]["raw"].items():
         try:
-            print(f'\t{act_resource_type.upper()}\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}')
+            percentage = '{:.1%}'.format(1 - (total_reserved["raw"][act_resource_type] / act_resource_amount) )
+            print(f'\t{act_resource_type.upper()}\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}\t{percentage}')
         except KeyError:
             print(f'\t{act_resource_type.upper()}\t{act_resource_amount}\t0\t0')
