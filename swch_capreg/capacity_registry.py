@@ -106,7 +106,39 @@ def SummarizeAllReservations(capacity: dict):
                         total_reservations["raw"][res_sub_type] = res_amount
     
     return total_reservations
-            
+
+def RemainingCapacity(capacity: dict):
+    """Calculates the remaining capacity of the different resources.
+
+    Args:
+        capacity (dict): A dictionary containing the initial capacities and reservations. The current capacity registry.
+
+    Returns:
+        dict: A dictionary containing the remaining capacity of the different resources, grouped by the resource types ('raw' and 'flavor').
+    """
+
+    total_reservations = SummarizeAllReservations(capacity)
+    initial_capacity = capacity["initial"]
+
+    remaining_capacity = {
+        "flavor": copy.deepcopy( initial_capacity["flavor"] ),
+        "raw" : copy.deepcopy( initial_capacity["raw"] )
+        }
+    
+    for res_tpye, res_data in total_reservations.items():
+        
+        if res_data == {}:
+            continue
+
+        for res_subtype, res_amount in res_data.items():
+            try:
+                remaining_capacity[res_tpye][res_subtype] -= res_amount
+            except KeyError:
+                remaining_capacity[res_tpye][res_subtype] = initial_capacity[res_tpye][res_subtype]
+                remaining_capacity[res_tpye][res_subtype] -= res_amount
+
+    return remaining_capacity
+
 def MakeReservation(reservation: dict):
     
     # TO-DO: function documentation
