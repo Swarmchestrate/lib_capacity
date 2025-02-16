@@ -205,6 +205,15 @@ def ReadCapacityRegistry():
     return capacity
 
 def SaveCapacityRegistry(capacity: dict):
+    """Saves a given capacity registry into a file. Filename is "capreg.yaml".
+
+    Args:
+        capacity (dict): A capacity registry dictionary.
+
+    Returns:
+        bool: True if saving was successful. False if an error has occured.
+    """
+
     # TO-DO: function documentation
     # TO-DO: dict key check
     # TO-DO: dict value check
@@ -212,6 +221,7 @@ def SaveCapacityRegistry(capacity: dict):
     with open("capreg.yaml", "w") as file:
         try:
             file.write( yaml.dump(capacity) )
+            return True
         except yaml.YAMLError as exception:
             print(exception)
             logging.error("An error has occured!")
