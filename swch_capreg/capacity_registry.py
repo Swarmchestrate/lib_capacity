@@ -37,9 +37,9 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     # List of raw resource type keys: CPU, RAM, DISK, Public IP (list may change and expand)
     raw_resource_keys = ['cpu', 'ram', 'disk', 'pub_ip']
 
-    for act_res_key in raw_capacity.keys():
-        if act_res_key not in raw_resource_keys:
-            logger.error(f'No resource raw resource type "{act_res_key}" found!')
+    for required_res_key in raw_resource_keys:
+        if required_res_key not in raw_capacity.keys():
+            logger.error(f'No required raw resource type "{required_res_key}" found!')
             return False
 
     # TO-DO: dict values check
