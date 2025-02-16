@@ -72,8 +72,11 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     logger.info('Successfully initialized capacity registry!')
     return True
 
-def SummarizeAllReservations():
+def SummarizeAllReservations(capacity: dict):
     """Summarizes all reserved resources.
+
+    Args:
+        capacity (dict): A dictionary containing the initial capacities and reservations. The current capacity registry.
 
     Returns:
         dict: A dictionary of the overall amount of reserved resources. Contains the reserved amount of raw and flavor type resources.
@@ -81,11 +84,9 @@ def SummarizeAllReservations():
     
     # TO-DO: function documentation
 
-    capacity = ReadCapacityRegistry()
-
     total_reservations = {
-        "raw": {},
-        "flavor": {}
+        "flavor": {},
+        "raw": {}
         }
 
     res_ids = capacity["reservations"].keys()
