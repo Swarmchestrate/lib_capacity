@@ -32,7 +32,7 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     
     logger.info('Initializing capacity registry...')
 
-    # TO-DO: dict key check
+    # TO-DO: dict values check
 
     # List of raw resource type keys: CPU, RAM, DISK, Public IP (list may change and expand)
     raw_resource_keys = ['cpu', 'ram', 'disk', 'pub_ip']
@@ -41,8 +41,12 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
         if required_res_key not in raw_capacity.keys():
             logger.error(f'No required raw resource type "{required_res_key}" found!')
             return False
+        else:
+            if isinstance( raw_capacity[required_res_key], int) == False:
+                logger.error(f'Required raw resource type "{required_res_key}" found, but not integer. Please use an integer!')
+                return False
 
-    # TO-DO: dict values check
+    # TO-DO: dict key check for flavors
 
     capacity = {
         "initial": {},
