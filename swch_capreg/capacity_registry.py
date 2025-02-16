@@ -144,27 +144,46 @@ def MakeReservation(reservation: dict):
     # TO-DO: function documentation
     # TO-DO: dict key check
     # TO-DO: dict value check
-    reservation_uuid = str( uuid.uuid4() )
 
+    # Check if reservation can be made
     capacity = ReadCapacityRegistry()
+
+    remaining_capacity = RemainingCapacity(capacity)
 
     can_be_reserved = True
 
-    for reservation_type in reservation.keys():
-        print(reservation_type)
+    for res_type, res_data in reservation.items():
 
-    #reservation = {
-    #    reservation_uuid: reservation
-    #    }
+        for res_subtype, res_amount in res_data.items():
 
-    # if ...
-    capacity["reservations"][reservation_uuid] = reservation
+            if res_amount > 0:
+                if remaining_capacity[res_type][res_subtype] < res_amount:
+                    logger.info(f'Not enough remaining "{res_subtype}" resources.')
+                    can_be_reserved = False
+                    break
+            else:
+                logger.info(f'Invalid (0) amount of "{res_subtype}" resources requested. Requested amount of resources must be positive integers!')
+                can_be_reserved = False
+                break
+        
+        if can_be_reserved == False:
+            break
 
-    # Check if reservation can be made
-    # If it can be made, make the reservation and return (True, reservation_uuid)
-    # If it cannot be made, return (False, None)
+    if (can_be_reserved == False):
+        return None
+    elif (can_be_reserved == True):
+        logger.info('Enough remaining resources. Registering reservation.')
 
-    SaveCapacityRegistry(capacity)
+        reservation_uuid = str( uuid.uuid4() )
+        logger.info(f'Reservation ID generated: {reservation_uuid}')
+        
+        reservation['status'] = 'reserved'
+
+        capacity["reservations"][reservation_uuid] = reservation
+
+        SaveCapacityRegistry(capacity)
+        
+        return reservation_uuid
     
 
 def ReadCapacityRegistry():
