@@ -155,9 +155,15 @@ def MakeReservation(reservation: dict):
         str: An empty string if the reservation could not be made. If the reservation could be made, then the ID (a UUID) of the reservation as a string.
     """
     
-    # TO-DO: function documentation
-
     def ValidateReservation(reservation: dict):
+        """Validates a given reservation dictionary.
+
+        Args:
+            reservation (dict): A reservation dictionary, containing the requested resources.
+
+        Returns:
+            bool: True if the reservation dictionary is in an acceptable format. Otherwise, False.
+        """
 
         # Check for empty dict
         if reservation == {}:
