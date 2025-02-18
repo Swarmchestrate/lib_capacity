@@ -235,7 +235,7 @@ def MakeReservation(reservation: dict):
 
             capacity["reservations"][reservation_uuid] = reservation
 
-            #SaveCapacityRegistry(capacity)
+            SaveCapacityRegistry(capacity)
             
             return reservation_uuid
     else:
