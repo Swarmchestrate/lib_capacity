@@ -275,6 +275,7 @@ def MakeReservation(reservation: dict):
                 if remaining_capacity["flavor"][req_flavor] < reservation["flavor"][req_flavor]:
                     logger.info(f'Not enough remaining "{req_flavor}" flavor.')
                     can_be_reserved = False
+                    break
                 else:
                     flavor_config = copy.deepcopy( capacity["initial"]["flavor"][req_flavor]["config"] )
 
@@ -284,9 +285,10 @@ def MakeReservation(reservation: dict):
                         if req_res_amount > remaining_capacity["raw"][res_type]:
                             logger.info(f'Not enough remaining "{res_type}" resources.')
                             can_be_reserved = False
+                            break
                 
-                if can_be_reserved == False:
-                    break
+                    if can_be_reserved == False:
+                        break
 
         if (can_be_reserved == False):
             logger.info("Reservation cannot be made.")
