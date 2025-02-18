@@ -154,8 +154,10 @@ def MakeReservation(reservation: dict):
     Returns:
         str: An empty string if the reservation could not be made. If the reservation could be made, then the ID (a UUID) of the reservation as a string.
     """
+
+    capacity = ReadCapacityRegistry()
     
-    def ValidateReservation(reservation: dict, capacity: dict):
+    def ValidateReservation(reservation: dict):
         """Validates a given reservation dictionary.
 
         Args:
@@ -207,6 +209,7 @@ def MakeReservation(reservation: dict):
                                 return False
                 
                 return True
+            
             # Flavor resource check
             elif key == "flavor":
 
@@ -232,10 +235,8 @@ def MakeReservation(reservation: dict):
    
                 return True
     
-    capacity = ReadCapacityRegistry()
-
     # Check if reservation can be made
-    if ValidateReservation(reservation, capacity) == True:
+    if ValidateReservation(reservation) == True:
 
         remaining_capacity = RemainingCapacity(capacity)
 
