@@ -155,11 +155,12 @@ def MakeReservation(reservation: dict):
         str: An empty string if the reservation could not be made. If the reservation could be made, then the ID (a UUID) of the reservation as a string.
     """
     
-    def ValidateReservation(reservation: dict):
+    def ValidateReservation(reservation: dict, capacity: dict):
         """Validates a given reservation dictionary.
 
         Args:
             reservation (dict): A reservation dictionary, containing the requested resources.
+            capacity (dict): A dictionary containing the initial capacities and reservations. The current capacity registry.
 
         Returns:
             bool: True if the reservation dictionary is in an acceptable format. Otherwise, False.
@@ -196,17 +197,45 @@ def MakeReservation(reservation: dict):
                         if isinstance( reservation["raw"][sub_key], int) == False:
                             logger.error(f'Requested amount of resource "{sub_key}" is not an integer.')
                             return False
+                        elif isinstance( reservation["raw"][sub_key], bool) == True:
+                            logger.error(f'Requested amount of resource "{sub_key}" is not an integer.')
+                            return False
                         else:
                             # Check if raw resource is 1 or higher
                             if reservation["raw"][sub_key] <= 0:
                                 logger.error(f'Requested amount of resource "{sub_key}" is less then 1.')
                                 return False
-        return True
+                
+                return True
+            # Flavor resource check
+            elif key == "flavor":
+
+                # Check for invalid flavor
+                flavor_types = capacity["initial"]["flavor"].keys()
+                for req_flavor in reservation["flavor"].keys():
+                    if req_flavor not in flavor_types:
+                        logger.error(f'Unrecognized flavor type "{req_flavor}" requested.')
+                        return False
+                
+                    # Check if flavor amount is not integer
+                    if isinstance( reservation["flavor"][req_flavor], int) == False:
+                        logger.error(f'Requested amount of flavor "{req_flavor}" is not an integer.')
+                        return False
+                    elif isinstance( reservation["flavor"][req_flavor], bool) == True:
+                        logger.error(f'Requested amount of flavor "{req_flavor}" is not an integer.')
+                        return False
+                    else:
+                        # Check if flavor amount is 1 or higher
+                        if reservation["flavor"][req_flavor] <= 0:
+                            logger.error(f'Requested amount of flavor "{req_flavor}" is less then 1.')
+                            return False
+   
+                return True
+    
+    capacity = ReadCapacityRegistry()
 
     # Check if reservation can be made
-    if ValidateReservation(reservation) == True:
-
-        capacity = ReadCapacityRegistry()
+    if ValidateReservation(reservation, capacity) == True:
 
         remaining_capacity = RemainingCapacity(capacity)
 
