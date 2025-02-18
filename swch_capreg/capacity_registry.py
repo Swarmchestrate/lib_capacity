@@ -156,7 +156,42 @@ def MakeReservation(reservation: dict):
     """
     
     # TO-DO: function documentation
-    # TO-DO: dict key check
+
+    def ValidateReservation(reservation: dict):
+
+        # Check for empty dict
+        if reservation == {}:
+            logger.error('Empty reservation dictionary.')
+            return False
+        
+        # Check for invalid main resource type
+        for key in reservation.keys():
+            if key not in MAIN_RESOURCE_TYPES:
+                logger.error(f'Invalid main resource type "{key}".')
+                return False
+            
+            if reservation[key] == {}:
+                logger.error(f'Empty "{key}" reservation dictionary.')
+                return False
+            
+            # Raw resource check
+            if key == "raw":
+                for sub_key in reservation[key].keys():
+                    if sub_key not in RAW_RESOURCE_TYPES:
+                        logger.error(f'Invalid raw resource type "{sub_key}".')
+                        return False
+                    else:
+                        # Check if raw resource is integer
+                        if isinstance( reservation["raw"][sub_key], int) == False:
+                            logger.error(f'Requested amount of resource "{sub_key}" is not an integer.')
+                            return False
+                        else:
+                            # Check if raw resource is 1 or higher
+                            if reservation["raw"][sub_key] <= 0:
+                                logger.error(f'Requested amount of resource "{sub_key}" is less then 1.')
+                                return False
+        return True
+
     # TO-DO: dict value check
 
     # Check if reservation can be made
