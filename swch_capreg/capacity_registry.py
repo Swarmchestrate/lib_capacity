@@ -311,9 +311,10 @@ def MakeReservation(reservation: dict):
     
 def ReadCapacityRegistry():
     """Reads the capacity registry file.
+
+    Returns:
+        dict: A dictionary containing the contents of the capacity registry file.
     """
-    
-    # TO-DO: rewrite function documentation
 
     capacity = {}
 
