@@ -144,6 +144,16 @@ def RemainingCapacity(capacity: dict):
     return remaining_capacity
 
 def MakeReservation(reservation: dict):
+    """Reserves the given resources in a reservation. Initial reservation status is "reserved", if the reservation could be made.
+
+    A reservation can be made, only and if only, if enough resources exist for all requested resource types.
+
+    Args:
+        reservation (dict): A reservation dictionary containing the requested amount of resources.
+
+    Returns:
+        str: An empty string if the reservation could not be made. If the reservation could be made, then the ID (a UUID) of the reservation as a string.
+    """
     
     # TO-DO: function documentation
     # TO-DO: dict key check
