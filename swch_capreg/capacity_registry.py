@@ -118,16 +118,24 @@ def RemainingCapacity(capacity: dict):
         capacity (dict): A dictionary containing the initial capacities and reservations. The current capacity registry.
 
     Returns:
-        dict: A dictionary containing the remaining capacity of the different resources, grouped by the resource types ('raw' and 'flavor').
+        dict: A dictionary containing the remaining capacity of the different resources, grouped by the main resource types (eg.: raw, flavor etc.).
     """
 
     total_reservations = SummarizeAllReservations(capacity)
     initial_capacity = capacity["initial"]
 
     remaining_capacity = {
-        "flavor": copy.deepcopy( initial_capacity["flavor"] ),
+        "flavor": {},
         "raw" : copy.deepcopy( initial_capacity["raw"] )
         }
+    
+    flavor_types = list( capacity["initial"]["flavor"].keys() )
+
+    # TO-DO: count flavor used resources
+
+    if len(flavor_types) > 0:
+        for flavor_type in flavor_types:
+            remaining_capacity["flavor"][flavor_type] = initial_capacity["flavor"][flavor_type]["amount"]
     
     for res_tpye, res_data in total_reservations.items():
         
@@ -140,7 +148,7 @@ def RemainingCapacity(capacity: dict):
             except KeyError:
                 remaining_capacity[res_tpye][res_subtype] = initial_capacity[res_tpye][res_subtype]
                 remaining_capacity[res_tpye][res_subtype] -= res_amount
-
+    
     return remaining_capacity
 
 def MakeReservation(reservation: dict):
@@ -245,23 +253,43 @@ def MakeReservation(reservation: dict):
     # Check if reservation can be made
     if ValidateReservation(reservation) == True:
 
+        req_res_type = list( reservation.keys() )[0]
         remaining_capacity = RemainingCapacity(capacity)
-
         can_be_reserved = True
 
-        for res_type, res_data in reservation.items():
-            for res_subtype, res_amount in res_data.items():
-                if res_amount > 0:
+        if req_res_type == "raw":
+            for res_type, res_data in reservation.items():
+                for res_subtype, res_amount in res_data.items():
                     if remaining_capacity[res_type][res_subtype] < res_amount:
-                        logger.error(f'Not enough remaining "{res_subtype}" resources.')
+                        logger.info(f'Not enough remaining "{res_subtype}" resources.')
                         can_be_reserved = False
                         break
-            
-            if can_be_reserved == False:
-                break
+                
+                if can_be_reserved == False:
+                    break
+        
+        elif req_res_type == "flavor":
+            for req_flavor in reservation["flavor"].keys():
+                if remaining_capacity["flavor"][req_flavor] < reservation["flavor"][req_flavor]:
+                    logger.info(f'Not enough remaining "{req_flavor}" flavor.')
+                    can_be_reserved = False
+                else:
+                    flavor_config = copy.deepcopy( capacity["initial"]["flavor"][req_flavor]["config"] )
+
+                    for res_type, res_amount in flavor_config.items():
+                        req_res_amount = res_amount * reservation["flavor"][req_flavor]
+
+                        if req_res_amount > remaining_capacity["raw"][res_type]:
+                            logger.info(f'Not enough remaining "{res_type}" resources.')
+                            can_be_reserved = False
+                
+                if can_be_reserved == False:
+                    break
 
         if (can_be_reserved == False):
+            logger.info("Reservation cannot be made.")
             return ""
+        
         elif (can_be_reserved == True):
             logger.info('Enough remaining resources. Registering reservation.')
 
@@ -279,11 +307,12 @@ def MakeReservation(reservation: dict):
         logger.info("Reservation cannot be made.")
         return ""
     
-
 def ReadCapacityRegistry():
     """Reads the capacity registry file.
     """
     
+    # TO-DO: rewrite function documentation
+
     capacity = {}
 
     with open("capreg.yaml", "r") as file:
