@@ -198,47 +198,44 @@ def MakeReservation(reservation: dict):
                                 return False
         return True
 
-    # TO-DO: dict value check
-
     # Check if reservation can be made
-    capacity = ReadCapacityRegistry()
+    if ValidateReservation(reservation) == True:
 
-    remaining_capacity = RemainingCapacity(capacity)
+        capacity = ReadCapacityRegistry()
 
-    can_be_reserved = True
+        remaining_capacity = RemainingCapacity(capacity)
 
-    for res_type, res_data in reservation.items():
+        can_be_reserved = True
 
-        for res_subtype, res_amount in res_data.items():
-
-            if res_amount > 0:
-                if remaining_capacity[res_type][res_subtype] < res_amount:
-                    logger.info(f'Not enough remaining "{res_subtype}" resources.')
-                    can_be_reserved = False
-                    break
-            else:
-                logger.info(f'Invalid (0) amount of "{res_subtype}" resources requested. Requested amount of resources must be positive integers!')
-                can_be_reserved = False
+        for res_type, res_data in reservation.items():
+            for res_subtype, res_amount in res_data.items():
+                if res_amount > 0:
+                    if remaining_capacity[res_type][res_subtype] < res_amount:
+                        logger.error(f'Not enough remaining "{res_subtype}" resources.')
+                        can_be_reserved = False
+                        break
+            
+            if can_be_reserved == False:
                 break
-        
-        if can_be_reserved == False:
-            break
 
-    if (can_be_reserved == False):
-        return None
-    elif (can_be_reserved == True):
-        logger.info('Enough remaining resources. Registering reservation.')
+        if (can_be_reserved == False):
+            return ""
+        elif (can_be_reserved == True):
+            logger.info('Enough remaining resources. Registering reservation.')
 
-        reservation_uuid = str( uuid.uuid4() )
-        logger.info(f'Reservation ID generated: {reservation_uuid}')
-        
-        reservation['status'] = 'reserved'
+            reservation_uuid = str( uuid.uuid4() )
+            logger.info(f'Reservation ID generated: {reservation_uuid}')
+            
+            reservation['status'] = 'reserved'
 
-        capacity["reservations"][reservation_uuid] = reservation
+            capacity["reservations"][reservation_uuid] = reservation
 
-        SaveCapacityRegistry(capacity)
-        
-        return reservation_uuid
+            #SaveCapacityRegistry(capacity)
+            
+            return reservation_uuid
+    else:
+        logger.info("Reservation cannot be made.")
+        return ""
     
 
 def ReadCapacityRegistry():
