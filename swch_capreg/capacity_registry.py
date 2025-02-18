@@ -11,6 +11,10 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
     )
 
+# Constants
+MAIN_RESOURCE_TYPES = ["raw", "flavor"]                 # May expand in the future
+RAW_RESOURCE_TYPES = ["cpu", "ram", "disk", "pub_ip"]   # May expand in the future
+
 def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     """Initializes a capacity registry file with the given initial resources.
 
