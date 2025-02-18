@@ -92,22 +92,27 @@ def SummarizeAllReservations(capacity: dict):
         "flavor": {},
         "raw": {}
         }
+    
+    for raw_res_type in capacity["initial"]["raw"].keys():
+        total_reservations["raw"][raw_res_type] = 0
+    
+    for flavor_type in capacity["initial"]["flavor"].keys():
+        total_reservations["flavor"][flavor_type] = 0
 
-    res_ids = capacity["reservations"].keys()
+    if len( capacity["reservations"].keys() ) > 0:
+        for res_id in capacity["reservations"].keys():
+            if "raw" in capacity["reservations"][res_id].keys():
+                for res_type, res_amount in capacity["reservations"][res_id]["raw"].items():
+                    total_reservations["raw"][res_type] += res_amount
 
-    for act_res_id in res_ids:
+            elif "flavor" in capacity["reservations"][res_id].keys():
+                for flavor_type, res_amount in capacity["reservations"][res_id]["flavor"].items():
+                    total_reservations["flavor"][flavor_type] += res_amount
 
-        act_res = capacity["reservations"][act_res_id]
-
-        for res_main_type, res_reources in act_res.items():
-                
-            if res_main_type == "raw":
-                    
-                for res_sub_type, res_amount in res_reources.items():
-                    try:
-                        total_reservations["raw"][res_sub_type] += res_amount
-                    except KeyError:
-                        total_reservations["raw"][res_sub_type] = res_amount
+                    for config_res_type, config_res_amount in capacity["initial"]["flavor"][flavor_type]["config"].items():
+                        total_reservations["raw"][config_res_type] += (res_amount * config_res_amount)
+    else:
+        pass
     
     return total_reservations
 
@@ -123,7 +128,7 @@ def RemainingCapacity(capacity: dict):
 
     total_reservations = SummarizeAllReservations(capacity)
     initial_capacity = capacity["initial"]
-
+    
     remaining_capacity = {
         "flavor": {},
         "raw" : copy.deepcopy( initial_capacity["raw"] )
