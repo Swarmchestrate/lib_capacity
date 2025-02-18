@@ -146,7 +146,9 @@ def RemainingCapacity(capacity: dict):
 def MakeReservation(reservation: dict):
     """Reserves the given resources in a reservation. Initial reservation status is "reserved", if the reservation could be made.
 
-    A reservation can be made, only and if only, if enough resources exist for all requested resource types.
+    A reservation can be made, only and if only, if enough free resources exist for the requested resource types.
+
+    IMPORTANT: only one main resource type can be reserved in a reservation, eg.: only raw.
 
     Args:
         reservation (dict): A reservation dictionary containing the requested amount of resources.
@@ -186,6 +188,11 @@ def MakeReservation(reservation: dict):
             
             if reservation[key] == {}:
                 logger.error(f'Empty "{key}" reservation dictionary.')
+                return False
+            
+            # Check if multiple main resource types were requested
+            if len( reservation.keys() ) > 1:
+                logger.error(f'Too many resource types requested.')
                 return False
             
             # Raw resource check
