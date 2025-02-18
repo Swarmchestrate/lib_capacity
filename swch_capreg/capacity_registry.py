@@ -165,6 +165,11 @@ def MakeReservation(reservation: dict):
             bool: True if the reservation dictionary is in an acceptable format. Otherwise, False.
         """
 
+        # Check reservation type
+        if isinstance( reservation, dict ) == False:
+            logger.error('Reservation not in a dictionary format.')
+            return False
+        
         # Check for empty dict
         if reservation == {}:
             logger.error('Empty reservation dictionary.')
