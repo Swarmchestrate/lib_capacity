@@ -28,12 +28,71 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
         bool: True if the initialization was successful, otherwise, False.
     """
 
+    def ValidateInitializationRawDict(raw_capacity: dict):
+
+        # TO-DO: function documentation
+        # TO-DO: input raw dict key check
+        # TO-DO: input raw dict value check
+
+        if isinstance( raw_capacity, dict ) == False:
+            logger.error("Input initial raw capacity is not a dict.")
+            return False
+
+        # Check if empty
+        if raw_capacity == {}:
+            logger.error("Input initial raw capacity is empty.")
+            return False
+        
+        # Check keys
+        for init_raw_type in raw_capacity.keys():
+
+            # Check if not string
+            if isinstance( init_raw_type, str) == False:
+                logger.error(f'Raw resource dictionary key "{init_raw_type}" is not a string.')
+                return False
+
+            # Check if unknown raw resource type
+            if init_raw_type not in RAW_RESOURCE_TYPES:
+                logger.error(f'Unknown raw resource type "{init_raw_type}".')
+                return False
+            else:
+                # Check if integer
+                if isinstance( raw_capacity[init_raw_type], int ) == False:
+                    logger.error(f'Raw resource type "{init_raw_type}" is not an integer.')
+                    return False
+                elif isinstance( raw_capacity[init_raw_type], bool ) == True:
+                    logger.error(f'Raw resource type "{init_raw_type}" is not an integer.')
+                    return False
+                
+                # Check if 1 or higher
+                if raw_capacity[init_raw_type] < 1:
+                    logger.error(f'Amount of initial raw resource type "{init_raw_type}" must be 1 or higher.')
+                    return False
+        
+        return True
+    
+    def ValidateInitializationFlavorDict(flavor_capacity: dict):
+
+        # TO-DO: function documentation
+        # TO-DO: input flavor dict key check
+        # TO-DO: input flavor dict value check
+
+        if flavor_capacity == {}:
+            logger.error("Input initial flavor capacity is empty.")
+            return False
+        
+
     # TO-DO: include example for usage in documentation
     # TO-DO: include option to init from yaml file
 
     if (raw_capacity == None and flavor_capacity == None):
         logger.error("No initial capacity defined. Please define initial resources!")
         return False
+    
+    if (raw_capacity != None):
+        if ValidateInitializationRawDict(raw_capacity) == False:
+            logger.info('Invalid raw resource dictionary. Initialization was unsuccessful.')
+            return False
     
     logger.info('Initializing capacity registry...')
 
