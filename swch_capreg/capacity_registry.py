@@ -422,16 +422,35 @@ def GetCapacityRegistryInfo():
     """
 
     capacity = ReadCapacityRegistry()
+    total_reserved = SummarizeAllReservations(capacity)
+    no_of_reservations = len( capacity["reservations"].keys() )
 
     logger.info('Listing all resource capacities.')
 
-    total_reserved = SummarizeAllReservations(capacity)
+    print(f"\r\n\tTotal number of reservations: {no_of_reservations}")
 
-    print("\r\n\tType\tAll\tReserv.\t(% free)")
+
+    if (capacity["initial"]["raw"] is not None):
+        print("\r\n\tRAW resources:")
+        print("\tType\t\tAll\tReserv.\t(% free)")
+
+        # Listing raw resources  
+        for act_resource_type, act_resource_amount in capacity["initial"]["raw"].items():
+            try:
+                percentage = '{:.1%}'.format(1 - (total_reserved["raw"][act_resource_type] / act_resource_amount) )
+                print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}\t{percentage}')
+            except KeyError:
+                print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t0\t0')
     
-    for act_resource_type, act_resource_amount in capacity["initial"]["raw"].items():
-        try:
-            percentage = '{:.1%}'.format(1 - (total_reserved["raw"][act_resource_type] / act_resource_amount) )
-            print(f'\t{act_resource_type.upper()}\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}\t{percentage}')
-        except KeyError:
-            print(f'\t{act_resource_type.upper()}\t{act_resource_amount}\t0\t0')
+    # Listing flavor resources
+    if (capacity["initial"]["flavor"] is not None):
+        print("\r\n\tDefined flavors:")
+        print("\tFlavor\t\tAll\tReserv.\t(% free)")
+
+        for act_flavor_type, act_flavor_data in capacity["initial"]["flavor"].items():
+            percentage = '{:.1%}'.format(1 - (total_reserved["flavor"][act_flavor_type] / act_flavor_data["amount"]) )
+            print(f'\t{act_flavor_type.upper()}\t{act_flavor_data["amount"]}\t{total_reserved["flavor"][act_flavor_type]}\t{percentage}')
+    else:
+        print("\r\n\tThere were no flavor types defined.")
+    
+    print()
