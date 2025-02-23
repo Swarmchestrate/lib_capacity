@@ -323,7 +323,7 @@ def MakeReservation(reservation: dict):
             for res_type, res_data in reservation.items():
                 for res_subtype, res_amount in res_data.items():
                     if remaining_capacity[res_type][res_subtype] < res_amount:
-                        logger.info(f'Not enough remaining "{res_subtype}" resources.')
+                        logger.warning(f'Not enough remaining "{res_subtype}" resources.')
                         can_be_reserved = False
                         break
                 
@@ -333,7 +333,7 @@ def MakeReservation(reservation: dict):
         elif req_res_type == "flavor":
             for req_flavor in reservation["flavor"].keys():
                 if remaining_capacity["flavor"][req_flavor] < reservation["flavor"][req_flavor]:
-                    logger.info(f'Not enough remaining "{req_flavor}" flavor.')
+                    logger.warning(f'Not enough remaining "{req_flavor}" flavor.')
                     can_be_reserved = False
                     break
                 else:
@@ -343,7 +343,7 @@ def MakeReservation(reservation: dict):
                         req_res_amount = res_amount * reservation["flavor"][req_flavor]
 
                         if req_res_amount > remaining_capacity["raw"][res_type]:
-                            logger.info(f'Not enough remaining "{res_type}" resources.')
+                            logger.warning(f'Not enough remaining "{res_type}" resources.')
                             can_be_reserved = False
                             break
                 
