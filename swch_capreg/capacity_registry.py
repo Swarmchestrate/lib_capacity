@@ -144,17 +144,19 @@ def SummarizeAllReservations(capacity: dict):
     """
     
     # TO-DO: function documentation
-
+    
     total_reservations = {
         "flavor": {},
         "raw": {}
         }
     
-    for raw_res_type in capacity["initial"]["raw"].keys():
-        total_reservations["raw"][raw_res_type] = 0
+    if capacity["initial"]["raw"] is not None:
+        for raw_res_type in capacity["initial"]["raw"].keys():
+            total_reservations["raw"][raw_res_type] = 0
     
-    for flavor_type in capacity["initial"]["flavor"].keys():
-        total_reservations["flavor"][flavor_type] = 0
+    if capacity["initial"]["flavor"] is not None:
+        for flavor_type in capacity["initial"]["flavor"].keys():
+            total_reservations["flavor"][flavor_type] = 0
 
     if len( capacity["reservations"].keys() ) > 0:
         for res_id in capacity["reservations"].keys():
