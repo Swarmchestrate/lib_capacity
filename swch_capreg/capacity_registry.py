@@ -96,8 +96,6 @@ def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
 
     # TO-DO: dict values check
 
-    # TO-DO: separate into constant
-    
     for required_res_key in RAW_RESOURCE_TYPES:
         if required_res_key not in raw_capacity.keys():
             logger.error(f'No required raw resource type "{required_res_key}" found!')
@@ -140,7 +138,7 @@ def SummarizeAllReservations(capacity: dict):
     Returns:
         dict: A dictionary of the overall amount of reserved resources. Contains the reserved amount of raw and flavor type resources.
     """
-    
+
     total_reservations = {
         "flavor": {},
         "raw": {}
