@@ -414,8 +414,8 @@ def SaveCapacityRegistry(capacity: dict):
 
             return False
 
-def ListCurrentCapacity():
-    """Lists the currently available capacity to the console.
+def GetCapacityRegistryInfo():
+    """Lists information about the current capacity registry.
     """
 
     capacity = ReadCapacityRegistry()
