@@ -15,13 +15,11 @@ logging.basicConfig(
 MAIN_RESOURCE_TYPES = ["raw", "flavor"]                 # May expand in the future
 RAW_RESOURCE_TYPES = ["cpu", "ram", "disk", "pub_ip"]   # May expand in the future
 
-def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
-    """Initializes a capacity registry file with the given initial resources.
-
-    IMPORTANT: at least one initial resource type dictionary is required.
+def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
+    """Initializes a capacity registry file with the given initial resources. A raw resource dictionary is reqired at all times.
 
     Args:
-        raw_capacity (dict, optional): A dictionary containing raw resource types (eg.: disk, CPU, RAM, floating IPs etc.). Defaults to None.
+        raw_capacity (dict): A dictionary containing raw resource types (eg.: disk, CPU, RAM, floating IPs etc.). Defaults to None.
         flavor_capacity (dict, optional): A dictionary containing VM resource types (eg.: m1.medium, l1.large, s1.small etc.). Defaults to None.
 
     Returns:
@@ -86,7 +84,7 @@ def Initialize(raw_capacity: dict = None, flavor_capacity: dict = None):
     # TO-DO: include option to init from yaml file
 
     if (raw_capacity == None and flavor_capacity == None):
-        logger.error("No initial capacity defined. Please define initial resources!")
+        logger.error("No initial resource capacity defined. Please define initial resources!")
         return False
     
     if (raw_capacity != None):
