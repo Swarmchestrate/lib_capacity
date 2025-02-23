@@ -19,7 +19,7 @@ def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
     """Initializes a capacity registry file with the given initial resources. A raw resource dictionary is reqired at all times.
 
     Args:
-        raw_capacity (dict): A dictionary containing raw resource types (eg.: disk, CPU, RAM, floating IPs etc.). Defaults to None.
+        raw_capacity (dict): A dictionary containing raw resource types (eg.: disk, CPU, RAM, floating IPs etc.).
         flavor_capacity (dict, optional): A dictionary containing VM resource types (eg.: m1.medium, l1.large, s1.small etc.). Defaults to None.
 
     Returns:
