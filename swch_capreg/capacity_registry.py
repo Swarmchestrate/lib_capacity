@@ -141,8 +141,6 @@ def SummarizeAllReservations(capacity: dict):
         dict: A dictionary of the overall amount of reserved resources. Contains the reserved amount of raw and flavor type resources.
     """
     
-    # TO-DO: function documentation
-    
     total_reservations = {
         "flavor": {},
         "raw": {}
@@ -286,6 +284,11 @@ def MakeReservation(reservation: dict):
             
             # Flavor resource check
             elif key == "flavor":
+
+                # Check if there were any flavors defined
+                if capacity["initial"]["flavor"] is None:
+                    logger.error("There are no flavors types defined.")
+                    return False
 
                 # Check for invalid flavor
                 flavor_types = capacity["initial"]["flavor"].keys()
