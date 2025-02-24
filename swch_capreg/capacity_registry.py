@@ -236,19 +236,18 @@ def RemainingCapacity(capacity: dict):
         "flavor": {},
         "raw" : {}
         }
-
-    flavor_types = list( capacity["initial"]["flavor"].keys() )
+    
     raw_res_types = list( capacity["initial"]["raw"].keys() )
-
-    # TO-DO: count flavor used resources
 
     if len(raw_res_types) > 0:
         for raw_res_type in raw_res_types:
             remaining_capacity["raw"][raw_res_type] = initial_capacity["raw"][raw_res_type]
 
-    if len(flavor_types) > 0:
-        for flavor_type in flavor_types:
-            remaining_capacity["flavor"][flavor_type] = initial_capacity["flavor"][flavor_type]["amount"]
+    if capacity["initial"]["flavor"] != None:
+        flavor_types = list( capacity["initial"]["flavor"].keys() )
+        if len(flavor_types) > 0:
+            for flavor_type in flavor_types:
+                remaining_capacity["flavor"][flavor_type] = initial_capacity["flavor"][flavor_type]["amount"]
     
     for main_res_type, res_data in total_reservations.items():
         for sub_res_type, res_amount in res_data.items():
