@@ -14,6 +14,7 @@ logging.basicConfig(
 # Constants
 MAIN_RESOURCE_TYPES = ["raw", "flavor"]                 # May expand in the future
 RAW_RESOURCE_TYPES = ["cpu", "ram", "disk", "pub_ip"]   # May expand in the future
+FLAVOR_TYPE_KEYS = ["config", "amount"]                 # May expand in the future
 
 def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
     """Initializes a capacity registry file with the given initial resources. A raw resource dictionary is reqired at all times.
@@ -32,6 +33,7 @@ def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
         # TO-DO: input raw dict key check
         # TO-DO: input raw dict value check
 
+        # Check if not dict
         if isinstance( raw_capacity, dict ) == False:
             logger.error("Input initial raw capacity is not a dict.")
             return False
@@ -75,9 +77,52 @@ def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
         # TO-DO: input flavor dict key check
         # TO-DO: input flavor dict value check
 
+        # Check if dict
+        if isinstance( flavor_capacity, dict ) == False:
+            logger.error("Input initial flavor capacity is not a dict.")
+            return False
+
+        # Check if empty
         if flavor_capacity == {}:
             logger.error("Input initial flavor capacity is empty.")
             return False
+    
+        # Check keys
+        for init_flavor_type in flavor_capacity.keys():
+
+            # Check if keys not string
+            if isinstance( init_flavor_type, str) == False:
+                logger.error(f'Flavor type key "{init_flavor_type}" is not a string.')
+                return False
+            
+            # Check for necessary keys
+            for flavor_key in FLAVOR_TYPE_KEYS:
+                if flavor_key not in flavor_capacity[init_flavor_type].keys():
+                    logger.error(f'No "{flavor_key}" defined for "{init_flavor_type}".')
+                    return False
+            
+            # Check for unknown keys
+            for config_key in flavor_capacity[init_flavor_type]["config"].keys():
+                if config_key not in RAW_RESOURCE_TYPES:
+                    logger.error(f'Unknown configuration key "{config_key}" defined in flavor "{init_flavor_type}".')
+                    return False
+            
+            # Check "amount" key and value
+            if "amount" in flavor_capacity[init_flavor_type].keys():
+                # Check if integer
+                if isinstance( flavor_capacity[init_flavor_type]["amount"], int ) == False:
+                    logger.error(f'Amount defined for flavor "{init_flavor_type}" is not an integer.')
+                    return False
+                
+                # Check if bool
+                if isinstance( flavor_capacity[init_flavor_type]["amount"], bool ) == True:
+                    logger.error(f'Amount defined for flavor "{init_flavor_type}" is not an integer.')
+                    return False
+                
+                # Check if over 1
+                if flavor_capacity[init_flavor_type]["amount"] < 1:
+                    logger.error(f'Invalid amount defined for flavor "{init_flavor_type}".')
+                    return False
         
 
     # TO-DO: include example for usage in documentation
@@ -91,6 +136,11 @@ def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
         if ValidateInitializationRawDict(raw_capacity) == False:
             logger.info('Invalid raw resource dictionary. Initialization was unsuccessful.')
             return False
+
+        if flavor_capacity != None:
+            if ValidateInitializationFlavorDict(flavor_capacity) == False:
+                logger.info('Invalid flavor types in flavor dictionary. Initialization was unsuccessful.')
+                return False
     
     logger.info('Initializing capacity registry...')
 
