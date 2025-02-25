@@ -255,13 +255,11 @@ def RemainingCapacity(capacity: dict):
     
     return remaining_capacity
 
-def MakeReservation(reservation: dict):
-    """Reserves the given resources in a reservation. Initial reservation status is "reserved", if the reservation could be made.
+def GetReservationOffer(reservation: dict):
+    """Gets a reservation offer with the given resources. Initial reservation status is "reserved", if the reservation could be made.
 
-    A reservation can be made, only and if only, if enough free resources exist for the requested resource types.
-
-    IMPORTANT: only one main resource type can be reserved in a reservation, eg.: only raw.
-
+    A reservation can be made, only and if only, enough free resources exist for the requested resource types.
+    
     Args:
         reservation (dict): A reservation dictionary containing the requested amount of resources.
 
