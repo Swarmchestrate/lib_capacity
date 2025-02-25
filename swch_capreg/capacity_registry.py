@@ -415,7 +415,36 @@ def GetReservationOffer(reservation: dict):
     else:
         logger.info("Reservation cannot be made.")
         return ""
-    
+
+def AcceptOfferedReservation(reservation_id: str):
+
+    # TO-DO: function documentation
+
+    if isinstance( reservation_id, str) == False:
+        logger.error(f'Given reservation ID is not a string.')
+        return False
+
+    if reservation_id == "":
+        logger.warning(f'Please use a valid reservation ID.')
+        return False
+
+    capacity = ReadCapacityRegistry()
+
+    if reservation_id in capacity["reservations"].keys():
+        if capacity["reservations"][reservation_id]["status"] != "reserved":
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "RESERVED" status.')
+            return False
+
+        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "ASSIGNED".')
+        capacity["reservations"][reservation_id]["status"] = "assigned"
+
+        SaveCapacityRegistry(capacity)
+
+        return True
+    else:
+        logger.warning(f'Reservation with ID "{reservation_id}" not found.')
+        return False
+
 def ReadCapacityRegistry():
     """Reads the capacity registry file.
 
