@@ -71,11 +71,7 @@ def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
         
         return True
     
-    def ValidateInitializationFlavorDict(flavor_capacity: dict):
-
-        # TO-DO: function documentation
-        # TO-DO: input flavor dict key check
-        # TO-DO: input flavor dict value check
+    def ValidateInitializationFlavorDict(flavor_capacity: dict, raw_given: bool = False):
 
         # Check if dict
         if isinstance( flavor_capacity, dict ) == False:
@@ -87,44 +83,98 @@ def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
             logger.error("Input initial flavor capacity is empty.")
             return False
     
-        # Check keys
+        # Check flavor keys
         for init_flavor_type in flavor_capacity.keys():
 
-            # Check if keys not string
+            # Check if key is not string
             if isinstance( init_flavor_type, str) == False:
                 logger.error(f'Flavor type key "{init_flavor_type}" is not a string.')
                 return False
             
+            # Check if flavor is not dict
+            if isinstance( flavor_capacity[init_flavor_type], dict) == False:
+                logger.error(f'Flavor type definition for "{init_flavor_type}" is not a dict.')
+                return False
+            
+            # Check if flavor is not dict
+            if flavor_capacity[init_flavor_type] == {}:
+                logger.error(f'Flavor type definition for "{init_flavor_type}" is empty.')
+                return False
+            
+            # Check for unknown keys in flavor
+            for flavor_key in flavor_capacity[init_flavor_type].keys():
+                if flavor_key not in FLAVOR_TYPE_KEYS:
+                    logger.error(f'Uknown key "{flavor_key}" defined for flavor type "{init_flavor_type}".')
+                    return False
+            
             # Check for necessary keys
-            for flavor_key in FLAVOR_TYPE_KEYS:
-                if flavor_key not in flavor_capacity[init_flavor_type].keys():
-                    logger.error(f'No "{flavor_key}" defined for "{init_flavor_type}".')
-                    return False
-            
-            # Check for unknown keys
-            for config_key in flavor_capacity[init_flavor_type]["config"].keys():
-                if config_key not in RAW_RESOURCE_TYPES:
-                    logger.error(f'Unknown configuration key "{config_key}" defined in flavor "{init_flavor_type}".')
-                    return False
-            
-            # Check "amount" key and value
-            if "amount" in flavor_capacity[init_flavor_type].keys():
-                # Check if integer
-                if isinstance( flavor_capacity[init_flavor_type]["amount"], int ) == False:
-                    logger.error(f'Amount defined for flavor "{init_flavor_type}" is not an integer.')
+            if "config" not in flavor_capacity[init_flavor_type].keys():
+                logger.error(f'No "config" defined for flavor type "{init_flavor_type}".')
+                return False
+            else:
+                # Check if config not dict
+                if isinstance(flavor_capacity[init_flavor_type]["config"], dict) == False:
+                    logger.error(f'Config defined for flavor type "{init_flavor_type}" is not a dictionary.')
                     return False
                 
-                # Check if bool
-                if isinstance( flavor_capacity[init_flavor_type]["amount"], bool ) == True:
-                    logger.error(f'Amount defined for flavor "{init_flavor_type}" is not an integer.')
+                # Check if config is empty
+                if flavor_capacity[init_flavor_type]["config"] == {}:
+                    logger.error(f'Config defined for flavor type "{init_flavor_type}" is empty.')
                     return False
                 
-                # Check if over 1
-                if flavor_capacity[init_flavor_type]["amount"] < 1:
-                    logger.error(f'Invalid amount defined for flavor "{init_flavor_type}".')
+                # Check for nevessary keys in flavor's config
+                for config_key in FLAVOR_CONFIG_KEYS_MIN:
+                    if config_key not in flavor_capacity[init_flavor_type]["config"].keys():
+                        logger.error(f'No key "{config_key}" defined in the config of flavor type "{init_flavor_type}".')
+                        return False
+            
+                # Check for unknown keys in flavor's config
+                for config_key in flavor_capacity[init_flavor_type]["config"].keys():
+                    if config_key not in RAW_RESOURCE_TYPES:
+                        logger.error(f'Unknown configuration key "{config_key}" defined in flavor "{init_flavor_type}".')
+                        return False
+                    else:
+                        # Check if integer
+                        if isinstance( flavor_capacity[init_flavor_type]["config"][config_key], int ) == False:
+                            logger.error(f'Config key "{config_key}" defined for flavor "{init_flavor_type}" is not an integer.')
+                            return False
+                        
+                        # Check if bool
+                        if isinstance( flavor_capacity[init_flavor_type]["config"][config_key], bool ) == True:
+                            logger.error(f'Config key "{config_key}" defined for flavor "{init_flavor_type}" is not an integer.')
+                            return False
+                        
+                        # Check if over 1
+                        if flavor_capacity[init_flavor_type]["config"][config_key] < 1:
+                            logger.error(f'Config key "{config_key}" must be 1 or higher for flavor "{init_flavor_type}".')
+                            return False
+            
+            if raw_given == True:
+                if "amount" in flavor_capacity[init_flavor_type].keys():
+                    logger.error(f'Raw resources were given, no "amount" key is necessary for flavor type "{init_flavor_type}".')
                     return False
-        
+            else:
+                if "amount" not in flavor_capacity[init_flavor_type].keys():
+                    logger.error(f'No "amount" key given for flavor type "{init_flavor_type}".')
+                    return False
 
+                # Check "amount" key and value
+                if "amount" in flavor_capacity[init_flavor_type].keys():
+                    # Check if integer
+                    if isinstance( flavor_capacity[init_flavor_type]["amount"], int ) == False:
+                        logger.error(f'Amount defined for flavor "{init_flavor_type}" is not an integer.')
+                        return False
+                    
+                    # Check if bool
+                    if isinstance( flavor_capacity[init_flavor_type]["amount"], bool ) == True:
+                        logger.error(f'Amount defined for flavor "{init_flavor_type}" is not an integer.')
+                        return False
+                    
+                    # Check if over 1
+                    if flavor_capacity[init_flavor_type]["amount"] < 1:
+                        logger.error(f'Invalid amount defined for flavor "{init_flavor_type}".')
+                        return False
+    
     # TO-DO: include example for usage in documentation
     # TO-DO: include option to init from yaml file
 
