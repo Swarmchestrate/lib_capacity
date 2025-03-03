@@ -17,13 +17,13 @@ RAW_RESOURCE_TYPES = ["cpu", "ram", "disk", "pub_ip"]   # May expand in the futu
 FLAVOR_CONFIG_KEYS_MIN = ["cpu", "ram", "disk"]         # May expand in the future
 FLAVOR_TYPE_KEYS = ["config", "amount"]                 # May expand in the future
 
-def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
-    """Initializes a capacity registry file with the given initial resources. A raw resource dictionary is reqired at all times.
+def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
+    """Initializes a capacity registry file with the given initial flavors. A dictionary containing the initial flavors is required for initialization.
 
     Args:
-        raw_capacity (dict): A dictionary containing raw resource types (eg.: disk, CPU, RAM, floating IPs etc.).
-        flavor_capacity (dict, optional): A dictionary containing VM resource types (eg.: m1.medium, l1.large, s1.small etc.). Defaults to None.
-
+        flavor_capacity (dict): A dictionary containing flavor (VM) types (eg.: m1.medium, l1.large, s1.small etc.).
+        raw_capacity (dict, optional): A dictionary containing raw resource types (eg.: disk, CPU, RAM, public IPs etc.). Defaults to None.
+    
     Returns:
         bool: True if the initialization was successful, otherwise, False.
     """
