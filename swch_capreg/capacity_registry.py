@@ -128,34 +128,24 @@ def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
     # TO-DO: include example for usage in documentation
     # TO-DO: include option to init from yaml file
 
-    if (raw_capacity == None and flavor_capacity == None):
-        logger.error("No initial resource capacity defined. Please define initial resources!")
+    if (flavor_capacity == None):
+        logger.error("No flavor types defined defined. Please define initial flavors!")
         return False
-    
-    if (raw_capacity != None):
-        if ValidateInitializationRawDict(raw_capacity) == False:
-            logger.info('Invalid raw resource dictionary. Initialization was unsuccessful.')
-            return False
-
-        if flavor_capacity != None:
-            if ValidateInitializationFlavorDict(flavor_capacity) == False:
-                logger.info('Invalid flavor types in flavor dictionary. Initialization was unsuccessful.')
+    else:
+        if (raw_capacity != None):
+            if ValidateInitializationRawDict(raw_capacity) == False:
+                logger.info('Invalid initial raw resource dictionary. Initialization was unsuccessful.')
+                return False
+            
+            if ValidateInitializationFlavorDict(flavor_capacity, raw_given=True) == False:
+                logger.info('Invalid initial flavor dictionary. Initialization was unsuccessful.')
+                return False
+        else:
+            if ValidateInitializationFlavorDict(flavor_capacity, raw_given=False) == False:
+                logger.info('Invalid initial flavor dictionary. Initialization was unsuccessful.')
                 return False
     
     logger.info('Initializing capacity registry...')
-
-    # TO-DO: dict values check
-
-    for required_res_key in RAW_RESOURCE_TYPES:
-        if required_res_key not in raw_capacity.keys():
-            logger.error(f'No required raw resource type "{required_res_key}" found!')
-            return False
-        else:
-            if isinstance( raw_capacity[required_res_key], int) == False:
-                logger.error(f'Required raw resource type "{required_res_key}" found, but not integer. Please use an integer!')
-                return False
-
-    # TO-DO: dict key check for flavors
 
     capacity = {
         "initial": {},
