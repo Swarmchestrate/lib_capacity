@@ -14,6 +14,7 @@ logging.basicConfig(
 # Constants
 MAIN_RESOURCE_TYPES = ["raw", "flavor"]                 # May expand in the future
 RAW_RESOURCE_TYPES = ["cpu", "ram", "disk", "pub_ip"]   # May expand in the future
+FLAVOR_CONFIG_KEYS_MIN = ["cpu", "ram", "disk"]         # May expand in the future
 FLAVOR_TYPE_KEYS = ["config", "amount"]                 # May expand in the future
 
 def Initialize(raw_capacity: dict, flavor_capacity: dict = None):
