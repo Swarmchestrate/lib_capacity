@@ -287,28 +287,34 @@ def RemainingCapacity(capacity: dict):
     """
 
     total_reservations = SummarizeAllReservations(capacity)
-    initial_capacity = capacity["initial"]
     
     remaining_capacity = {
         "flavor": {},
         "raw" : {}
         }
     
-    raw_res_types = list( capacity["initial"]["raw"].keys() )
-
-    if len(raw_res_types) > 0:
-        for raw_res_type in raw_res_types:
-            remaining_capacity["raw"][raw_res_type] = initial_capacity["raw"][raw_res_type]
-
-    if capacity["initial"]["flavor"] != None:
-        flavor_types = list( capacity["initial"]["flavor"].keys() )
-        if len(flavor_types) > 0:
-            for flavor_type in flavor_types:
-                remaining_capacity["flavor"][flavor_type] = initial_capacity["flavor"][flavor_type]["amount"]
+    raw_given = False if capacity["initial"]["raw"] == None else True
     
-    for main_res_type, res_data in total_reservations.items():
-        for sub_res_type, res_amount in res_data.items():
-            remaining_capacity[main_res_type][sub_res_type] -= res_amount
+    if raw_given == True:
+        
+        for raw_res_type in capacity["initial"]["raw"].keys():
+            remaining_capacity["raw"][raw_res_type] = capacity["initial"]["raw"][raw_res_type]
+        
+        for flavor_type in capacity["initial"]["flavor"].keys():
+            remaining_capacity["flavor"][flavor_type] = - 1
+
+        for raw_res_type in total_reservations["raw"].keys():
+            remaining_capacity["raw"][raw_res_type] -= total_reservations["raw"][raw_res_type]
+        
+    else:
+        for flavor_type in capacity["initial"]["flavor"].keys():
+            for raw_res_type in capacity["initial"]["flavor"][flavor_type]["config"].keys():
+                remaining_capacity["raw"][raw_res_type] = -1
+            
+            remaining_capacity["flavor"][flavor_type] = capacity["initial"]["flavor"][flavor_type]["amount"]
+        
+        for flavor_type in total_reservations["flavor"].keys():
+            remaining_capacity["flavor"][flavor_type] -= total_reservations["flavor"][flavor_type]
     
     return remaining_capacity
 
