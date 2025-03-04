@@ -559,17 +559,23 @@ def GetCapacityRegistryInfo():
                 print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}\t{free}\t{percentage}')
             except KeyError:
                 print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t0\t0')
+    else:
+         print("\r\n\tThere were no raw resources defined.")
     
     # Listing flavor resources
-    if (capacity["initial"]["flavor"] is not None):
-        print("\r\n\tDefined flavors:")
-        print("\tFlavor\t\tAll\tReserv.\tFree\t(% free)")
+    print("\r\n\tDefined flavors:")
+    print("\tFlavor\t\tAll\tReserv.\tFree\t(% free)")
 
-        for act_flavor_type, act_flavor_data in capacity["initial"]["flavor"].items():
+    for act_flavor_type, act_flavor_data in capacity["initial"]["flavor"].items():
+        percentage = 0
+        free = 0
+        try:
             percentage = '{:.1%}'.format(1 - (total_reserved["flavor"][act_flavor_type] / act_flavor_data["amount"]) )
             free = act_flavor_data["amount"] - total_reserved["flavor"][act_flavor_type]
             print(f'\t{act_flavor_type.upper()}\t{act_flavor_data["amount"]}\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
-    else:
-        print("\r\n\tThere were no flavor types defined.")
+        except KeyError:
+            percentage = "n/a"
+            free = "n/a"
+            print(f'\t{act_flavor_type.upper()}\tn/a\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
     
     print()
