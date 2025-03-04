@@ -29,6 +29,14 @@ def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
     """
 
     def ValidateInitializationRawDict(raw_capacity: dict):
+        """Validates a given (initial) raw capacity dictionary.
+
+        Args:
+            raw_capacity (dict): A dictionary defining raw resources (eg.: disk, CPU, RAM, public IPs etc.).
+
+        Returns:
+            bool: True, if the given raw capacity dictionary complies to the required format. Otherwise, False.
+        """
 
         # TO-DO: function documentation
         # TO-DO: input raw dict key check
@@ -73,6 +81,15 @@ def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
         return True
     
     def ValidateInitializationFlavorDict(flavor_capacity: dict, raw_given: bool = False):
+        """Validates a given (initial) flavor types dictionary.
+
+        Args:
+            flavor_capacity (dict): A dictionary containing flavor (VM) types (eg.: m1.medium, l1.large, s1.small etc.).
+            raw_given (bool, optional): A bool value, describing if a raw capacity dictionary was given during initialization. Defaults to False.
+
+        Returns:
+            bool: True, if the given flavor types dictionary complies to the required format. Otherwise, False.
+        """
 
         # Check if dict
         if isinstance( flavor_capacity, dict ) == False:
