@@ -398,40 +398,38 @@ def GetReservationOffer(reservation: dict):
     # Check if reservation can be made
     if ValidateReservation(reservation) == True:
 
-        req_res_type = list( reservation.keys() )[0]
         remaining_capacity = RemainingCapacity(capacity)
         can_be_reserved = True
 
-        if req_res_type == "raw":
-            for res_type, res_data in reservation.items():
-                for res_subtype, res_amount in res_data.items():
-                    if remaining_capacity[res_type][res_subtype] < res_amount:
-                        logger.warning(f'Not enough remaining "{res_subtype}" resources.')
-                        can_be_reserved = False
-                        break
+        for req_res_type in reservation.keys():
+
+            if req_res_type == "flavor":
                 
-                if can_be_reserved == False:
-                    break
-        
-        elif req_res_type == "flavor":
-            for req_flavor in reservation["flavor"].keys():
-                if remaining_capacity["flavor"][req_flavor] < reservation["flavor"][req_flavor]:
-                    logger.warning(f'Not enough remaining "{req_flavor}" flavor.')
-                    can_be_reserved = False
-                    break
-                else:
-                    flavor_config = copy.deepcopy( capacity["initial"]["flavor"][req_flavor]["config"] )
+                raw_given = False if capacity["initial"]["raw"] == None else True
 
-                    for res_type, res_amount in flavor_config.items():
-                        req_res_amount = res_amount * reservation["flavor"][req_flavor]
+                if raw_given == True:
+                    for req_flavor in reservation["flavor"].keys():
+                        flavor_config = copy.deepcopy( capacity["initial"]["flavor"][req_flavor]["config"] )
 
-                        if req_res_amount > remaining_capacity["raw"][res_type]:
-                            logger.warning(f'Not enough remaining "{res_type}" resources.')
-                            can_be_reserved = False
+                        for res_type, res_amount in flavor_config.items():
+
+                            req_res_amount = res_amount * reservation["flavor"][req_flavor]
+
+                            if req_res_amount > remaining_capacity["raw"][res_type]:
+                                logger.warning(f'Not enough remaining "{res_type}" resources.')
+                                can_be_reserved = False
+                                break
+                    
+                        if can_be_reserved == False:
                             break
                 
-                    if can_be_reserved == False:
-                        break
+                else:
+                    for req_flavor in reservation["flavor"].keys():
+                        
+                        if reservation["flavor"][req_flavor] > remaining_capacity["flavor"][req_flavor]:
+                            logger.warning(f'Not enough remaining "{req_flavor}" flavor.')
+                            can_be_reserved = False
+                            break
 
         if (can_be_reserved == False):
             logger.info("Reservation cannot be made.")
