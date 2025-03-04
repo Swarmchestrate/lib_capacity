@@ -35,10 +35,9 @@ def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
             raw_capacity (dict): A dictionary defining raw resources (eg.: disk, CPU, RAM, public IPs etc.).
 
         Returns:
-            bool: True, if the given raw capacity dictionary complies to the required format. Otherwise, False.
+            bool: True, if the given raw capacity dictionary complies with the required format. Otherwise, False.
         """
 
-        # TO-DO: function documentation
         # TO-DO: input raw dict key check
         # TO-DO: input raw dict value check
 
@@ -88,7 +87,7 @@ def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
             raw_given (bool, optional): A bool value, describing if a raw capacity dictionary was given during initialization. Defaults to False.
 
         Returns:
-            bool: True, if the given flavor types dictionary complies to the required format. Otherwise, False.
+            bool: True, if the given flavor types dictionary complies with the required format. Otherwise, False.
         """
 
         # Check if dict
@@ -169,11 +168,11 @@ def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
             
             if raw_given == True:
                 if "amount" in flavor_capacity[init_flavor_type].keys():
-                    logger.error(f'Raw resources were given, no "amount" key is necessary for flavor type "{init_flavor_type}".')
+                    logger.error(f'Raw resources were given. No "amount" key is necessary for flavor type "{init_flavor_type}".')
                     return False
             else:
                 if "amount" not in flavor_capacity[init_flavor_type].keys():
-                    logger.error(f'No "amount" key given for flavor type "{init_flavor_type}".')
+                    logger.error(f'No "amount" key is given for flavor type "{init_flavor_type}".')
                     return False
 
                 # Check "amount" key and value
@@ -197,7 +196,7 @@ def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
     # TO-DO: include option to init from yaml file
 
     if (flavor_capacity == None):
-        logger.error("No flavor types defined defined. Please define initial flavors!")
+        logger.error("No flavor types are defined. Please define the initial flavors!")
         return False
     else:
         if (raw_capacity != None):
@@ -319,10 +318,10 @@ def GetReservationOffer(reservation: dict):
     A reservation can be made, only and if only, enough free resources exist for the requested resource types.
     
     Args:
-        reservation (dict): A reservation dictionary containing the requested amount of resources.
+        reservation (dict): A reservation dictionary containing the requested resources and their amount.
 
     Returns:
-        str: An empty string if the reservation could not be made. If the reservation could be made, then the ID (a UUID) of the reservation as a string.
+        str: An empty string if the reservation cannot be made. If the reservation can be made, then the ID (a UUID) of the reservation as a string.
     """
 
     capacity = ReadCapacityRegistry()
@@ -340,7 +339,7 @@ def GetReservationOffer(reservation: dict):
 
         # Check reservation type
         if isinstance( reservation, dict ) == False:
-            logger.error('Reservation not in a dictionary format.')
+            logger.error('Reservation is not in a dictionary format.')
             return False
         
         # Check for empty dict
@@ -360,7 +359,7 @@ def GetReservationOffer(reservation: dict):
             
             # Check if multiple main resource types were requested
             if len( reservation.keys() ) > 1:
-                logger.error(f'Too many resource types requested.')
+                logger.error(f'Too many resource types were requested.')
                 return False
             
             # Raw resource check
@@ -372,15 +371,15 @@ def GetReservationOffer(reservation: dict):
                     else:
                         # Check if raw resource is integer
                         if isinstance( reservation["raw"][sub_key], int) == False:
-                            logger.error(f'Requested amount of resource "{sub_key}" is not an integer.')
+                            logger.error(f'The requested amount of resource "{sub_key}" is not an integer.')
                             return False
                         elif isinstance( reservation["raw"][sub_key], bool) == True:
-                            logger.error(f'Requested amount of resource "{sub_key}" is not an integer.')
+                            logger.error(f'The requested amount of resource "{sub_key}" is not an integer.')
                             return False
                         else:
                             # Check if raw resource is 1 or higher
                             if reservation["raw"][sub_key] <= 0:
-                                logger.error(f'Requested amount of resource "{sub_key}" is less then 1.')
+                                logger.error(f'The requested amount of resource "{sub_key}" is less than 1.')
                                 return False
                 
                 return True
@@ -390,7 +389,7 @@ def GetReservationOffer(reservation: dict):
 
                 # Check if there were any flavors defined
                 if capacity["initial"]["flavor"] is None:
-                    logger.error("There are no flavors types defined.")
+                    logger.error("There are no flavor types defined.")
                     return False
 
                 # Check for invalid flavor
@@ -402,15 +401,15 @@ def GetReservationOffer(reservation: dict):
                 
                     # Check if flavor amount is not integer
                     if isinstance( reservation["flavor"][req_flavor], int) == False:
-                        logger.error(f'Requested amount of flavor "{req_flavor}" is not an integer.')
+                        logger.error(f'The requested amount of flavor "{req_flavor}" is not an integer.')
                         return False
                     elif isinstance( reservation["flavor"][req_flavor], bool) == True:
-                        logger.error(f'Requested amount of flavor "{req_flavor}" is not an integer.')
+                        logger.error(f'The requested amount of flavor "{req_flavor}" is not an integer.')
                         return False
                     else:
                         # Check if flavor amount is 1 or higher
                         if reservation["flavor"][req_flavor] <= 0:
-                            logger.error(f'Requested amount of flavor "{req_flavor}" is less then 1.')
+                            logger.error(f'The requested amount of flavor "{req_flavor}" is less than 1.')
                             return False
    
                 return True
@@ -493,9 +492,9 @@ def AcceptOfferedReservation(reservation_id: str):
             logger.warning(f'Reservation with ID "{reservation_id}" is not in "RESERVED" status.')
             return False
 
-        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "ASSIGNED".')
         capacity["reservations"][reservation_id]["status"] = "assigned"
-
+        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "ASSIGNED".')
+        
         SaveCapacityRegistry(capacity)
 
         return True
@@ -531,7 +530,7 @@ def SaveCapacityRegistry(capacity: dict):
         capacity (dict): A capacity registry dictionary.
 
     Returns:
-        bool: True if saving was successful. False if an error has occured.
+        bool: True if saving was successful. False if an error has occurred.
     """
 
     # TO-DO: function documentation
