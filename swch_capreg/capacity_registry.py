@@ -284,7 +284,7 @@ def RemainingCapacity(capacity: dict):
     """
 
     total_reservations = SummarizeAllReservations(capacity)
-    
+
     remaining_capacity = {
         "flavor": {},
         "raw" : {}
@@ -333,11 +333,10 @@ def GetReservationOffer(reservation: dict):
         """Validates a given reservation dictionary.
 
         Args:
-            reservation (dict): A reservation dictionary, containing the requested resources.
-            capacity (dict): A dictionary containing the initial capacities and reservations. The current capacity registry.
+            reservation (dict): A reservation dictionary, containing the requested flavor type(s) and their amount.
 
         Returns:
-            bool: True if the reservation dictionary is in an acceptable format. Otherwise, False.
+            bool: True, if the given reservation dictionary complies with the required format. Otherwise, False.
         """
 
         # Check reservation type
