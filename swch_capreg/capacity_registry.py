@@ -250,29 +250,26 @@ def SummarizeAllReservations(capacity: dict):
         "flavor": {},
         "raw": {}
         }
-    
-    if capacity["initial"]["raw"] is not None:
-        for raw_res_type in capacity["initial"]["raw"].keys():
-            total_reservations["raw"][raw_res_type] = 0
-    
-    if capacity["initial"]["flavor"] is not None:
-        for flavor_type in capacity["initial"]["flavor"].keys():
-            total_reservations["flavor"][flavor_type] = 0
 
-    if len( capacity["reservations"].keys() ) > 0:
-        for res_id in capacity["reservations"].keys():
-            if "raw" in capacity["reservations"][res_id].keys():
-                for res_type, res_amount in capacity["reservations"][res_id]["raw"].items():
-                    total_reservations["raw"][res_type] += res_amount
+    for reservation_id in capacity["reservations"].keys():
+        
+        for res_type in capacity["reservations"][reservation_id].keys():
 
-            elif "flavor" in capacity["reservations"][res_id].keys():
-                for flavor_type, res_amount in capacity["reservations"][res_id]["flavor"].items():
-                    total_reservations["flavor"][flavor_type] += res_amount
-
-                    for config_res_type, config_res_amount in capacity["initial"]["flavor"][flavor_type]["config"].items():
-                        total_reservations["raw"][config_res_type] += (res_amount * config_res_amount)
-    else:
-        pass
+            # May expand in the future
+            if res_type == "flavor":
+                for flavor_type, amount in capacity["reservations"][reservation_id][res_type].items():
+                    try:
+                        total_reservations["flavor"][flavor_type] += amount
+                    except KeyError:
+                        total_reservations["flavor"][flavor_type] = 0
+                        total_reservations["flavor"][flavor_type] += amount
+                    
+                    for raw_res_type, config_amount in capacity["initial"]["flavor"][flavor_type]["config"].items():
+                        try:
+                            total_reservations["raw"][raw_res_type] += (amount * config_amount)
+                        except KeyError:
+                            total_reservations["raw"][raw_res_type] = 0
+                            total_reservations["raw"][raw_res_type] += (amount * config_amount)
     
     return total_reservations
 
