@@ -38,9 +38,6 @@ def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
             bool: True, if the given raw capacity dictionary complies with the required format. Otherwise, False.
         """
 
-        # TO-DO: input raw dict key check
-        # TO-DO: input raw dict value check
-
         # Check if not dict
         if isinstance( raw_capacity, dict ) == False:
             logger.error("Input initial raw capacity is not a dict.")
@@ -349,72 +346,54 @@ def GetReservationOffer(reservation: dict):
             logger.error('Empty reservation dictionary.')
             return False
         
-        # Check for invalid main resource type
-        for key in reservation.keys():
-            if key not in MAIN_RESOURCE_TYPES:
-                logger.error(f'Invalid main resource type "{key}".')
-                return False
-            
-            if reservation[key] == {}:
-                logger.error(f'Empty "{key}" reservation dictionary.')
-                return False
-            
-            # Check if multiple main resource types were requested
+        # Check keys reservation
+        if "flavor" not in reservation.keys():
+            logger.error('No "flavor" key defined in the reservation.')
+            return False
+        else:
             if len( reservation.keys() ) > 1:
-                logger.error(f'Too many resource types were requested.')
+                logger.error('Too many keys defined in the reservation.')
                 return False
             
-            # Raw resource check
-            if key == "raw":
-                for sub_key in reservation[key].keys():
-                    if sub_key not in RAW_RESOURCE_TYPES:
-                        logger.error(f'Invalid raw resource type "{sub_key}".')
-                        return False
-                    else:
-                        # Check if raw resource is integer
-                        if isinstance( reservation["raw"][sub_key], int) == False:
-                            logger.error(f'The requested amount of resource "{sub_key}" is not an integer.')
-                            return False
-                        elif isinstance( reservation["raw"][sub_key], bool) == True:
-                            logger.error(f'The requested amount of resource "{sub_key}" is not an integer.')
-                            return False
-                        else:
-                            # Check if raw resource is 1 or higher
-                            if reservation["raw"][sub_key] <= 0:
-                                logger.error(f'The requested amount of resource "{sub_key}" is less than 1.')
-                                return False
-                
-                return True
-            
-            # Flavor resource check
-            elif key == "flavor":
+            # Check if flavor reservation is dict
+            if isinstance( reservation["flavor"], dict ) == False:
+                logger.error('Flavor reservation is not in a dictionary format.')
+                return False
+        
+            # Check for empty dict
+            if reservation["flavor"] == {}:
+                logger.error('Empty flavor reservation dictionary.')
+                return False
 
-                # Check if there were any flavors defined
-                if capacity["initial"]["flavor"] is None:
-                    logger.error("There are no flavor types defined.")
+            # Check for invalid flavor
+            flavor_types = capacity["initial"]["flavor"].keys()
+            for req_flavor in reservation["flavor"].keys():
+
+                # Check if flavor type is string
+                if isinstance(req_flavor, str) == False:
+                    logger.error(f'Flavor type "{req_flavor}" is not a string.')
                     return False
 
-                # Check for invalid flavor
-                flavor_types = capacity["initial"]["flavor"].keys()
-                for req_flavor in reservation["flavor"].keys():
-                    if req_flavor not in flavor_types:
-                        logger.error(f'Unrecognized flavor type "{req_flavor}" requested.')
-                        return False
+                if req_flavor not in flavor_types:
+                    logger.error(f'Unrecognized flavor type "{req_flavor}" requested.')
+                    return False
+            
+                # Check if flavor amount is not integer
+                if isinstance( reservation["flavor"][req_flavor], int) == False:
+                    logger.error(f'The requested amount of flavor "{req_flavor}" is not an integer.')
+                    return False
                 
-                    # Check if flavor amount is not integer
-                    if isinstance( reservation["flavor"][req_flavor], int) == False:
-                        logger.error(f'The requested amount of flavor "{req_flavor}" is not an integer.')
+                elif isinstance( reservation["flavor"][req_flavor], bool) == True:
+                    logger.error(f'The requested amount of flavor "{req_flavor}" is not an integer.')
+                    return False
+                
+                else:
+                    # Check if flavor amount is 1 or higher
+                    if reservation["flavor"][req_flavor] <= 0:
+                        logger.error(f'The requested amount of flavor "{req_flavor}" is less than 1.')
                         return False
-                    elif isinstance( reservation["flavor"][req_flavor], bool) == True:
-                        logger.error(f'The requested amount of flavor "{req_flavor}" is not an integer.')
-                        return False
-                    else:
-                        # Check if flavor amount is 1 or higher
-                        if reservation["flavor"][req_flavor] <= 0:
-                            logger.error(f'The requested amount of flavor "{req_flavor}" is less than 1.')
-                            return False
-   
-                return True
+
+        return True               
     
     # Check if reservation can be made
     if ValidateReservation(reservation) == True:
