@@ -564,7 +564,7 @@ def SaveCapacityRegistry(capacity: dict):
     """Saves a given capacity registry into a file. Filename is "capreg.yaml".
 
     Args:
-        capacity (dict): A capacity registry dictionary.
+        capacity (dict): A dictionary containing the initial capacities and reservations. The current capacity registry.
 
     Returns:
         bool: True if saving was successful. False if an error has occurred.
@@ -585,6 +585,83 @@ def SaveCapacityRegistry(capacity: dict):
 
             return False
 
+def GetReservationInfo(reservation_id: str):
+    """Lists information about a given reservation.
+
+    Args:
+        reservation_id (str): A reservation ID (UUID).
+    
+    Returns:
+        dict: A dictionary containing information about the reservation (Id, status, used resources etc.). Otherwise, an empty ({}) dictionary.
+    """
+
+    def SumReservationResources(reservation_id: str, capacity: dict):
+
+        # TO-DO: function documentation
+        total_reservations = {
+            "flavor": {},
+            "raw": {}
+        }
+
+        for flavor_type in capacity["reservations"][reservation_id]["flavor"].keys():
+            total_reservations["flavor"][flavor_type] = 0
+
+            for raw_res_type in capacity["initial"]["flavor"][flavor_type]["config"]:
+                if raw_res_type not in total_reservations["raw"].keys():
+                    total_reservations["raw"][raw_res_type] = 0
+
+        for res_type in capacity["reservations"][reservation_id].keys():
+
+            # May expand in the future
+            if res_type == "flavor":
+                for flavor_type, amount in capacity["reservations"][reservation_id][res_type].items():
+                    try:
+                        total_reservations["flavor"][flavor_type] += amount
+                    except KeyError:
+                        total_reservations["flavor"][flavor_type] = 0
+                        total_reservations["flavor"][flavor_type] += amount
+                    
+                    for raw_res_type, config_amount in capacity["initial"]["flavor"][flavor_type]["config"].items():
+                        try:
+                            total_reservations["raw"][raw_res_type] += (amount * config_amount)
+                        except KeyError:
+                            total_reservations["raw"][raw_res_type] = 0
+                            total_reservations["raw"][raw_res_type] += (amount * config_amount)
+            
+            return total_reservations
+
+    capacity = ReadCapacityRegistry()
+    reservation_exists = DoesReservationExist(reservation_id, capacity)
+
+    if reservation_exists != True:
+        return {}
+    else:
+        res_resources = SumReservationResources(reservation_id, capacity)
+        
+        reservation_info = {
+            'id': reservation_id,
+            'status': capacity["reservations"][reservation_id]['status'],
+            'flavor': res_resources['flavor'],
+            'raw': res_resources['raw']
+            }
+
+        logger.info('Listing reservation information.')
+        print(f'\r\n\tId: {reservation_info["id"]}')
+        print(f'\tStatus: {reservation_info["status"]}')
+        print('\tFlavor(s):')
+
+        for flavor, amount in reservation_info['flavor'].items():
+            print(f'\t\t- {flavor.upper()}: {amount}')
+
+        print('\r\n\tRaw resources:')
+        
+        for res, amount in reservation_info['raw'].items():
+            print(f'\t\t- {res.upper()}: {amount}')
+
+        print()
+
+        return reservation_info
+
 def GetCapacityRegistryInfo():
     """Lists information about the current capacity registry.
     """
@@ -599,7 +676,7 @@ def GetCapacityRegistryInfo():
 
 
     if (capacity["initial"]["raw"] is not None):
-        print("\r\n\tRAW resources:")
+        print("\r\n\tRaw resources:")
         print("\tType\t\tAll\tReserv.\tFree\t(% free)")
 
         # Listing raw resources  
