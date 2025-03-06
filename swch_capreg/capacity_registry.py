@@ -511,9 +511,34 @@ def AcceptOfferedReservation(reservation_id: str):
         SaveCapacityRegistry(capacity)
 
         return True
-    else:
-        logger.warning(f'Reservation with ID "{reservation_id}" not found.')
+    
+def RejectOfferedReservation(reservation_id: str):
+    """Rejects a reservation, freeing all related resources.
+
+    Args:
+        reservation_id (str): A reservation ID (UUID).
+
+    Returns:
+        bool: True, if the reservation was rejected successfully. Otherwise, False.
+    """
+
+    capacity = ReadCapacityRegistry()
+    reservation_exists = DoesReservationExist(reservation_id, capacity)
+    
+    if reservation_exists != True:
         return False
+    else:
+        if capacity["reservations"][reservation_id]["status"] != "reserved":
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "RESERVED" status.')
+            return False
+        
+        #capacity["reservations"][reservation_id]["status"] = "assigned"
+        del capacity["reservations"][reservation_id]
+        logger.info(f'Reservation "{reservation_id}" found. Reservation deleted.')
+        
+        SaveCapacityRegistry(capacity)
+
+        return True
 
 def ReadCapacityRegistry():
     """Reads the capacity registry file.
