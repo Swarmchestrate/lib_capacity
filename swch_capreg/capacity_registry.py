@@ -496,12 +496,15 @@ def AcceptOfferedReservation(reservation_id: str):
     """
 
     capacity = ReadCapacityRegistry()
-
-    if reservation_id in capacity["reservations"].keys():
+    reservation_exists = DoesReservationExist(reservation_id, capacity)
+    
+    if reservation_exists != True:
+        return False
+    else:
         if capacity["reservations"][reservation_id]["status"] != "reserved":
             logger.warning(f'Reservation with ID "{reservation_id}" is not in "RESERVED" status.')
             return False
-
+        
         capacity["reservations"][reservation_id]["status"] = "assigned"
         logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "ASSIGNED".')
         
