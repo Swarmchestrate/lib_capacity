@@ -460,6 +460,14 @@ def GetReservationOffer(reservation: dict):
         return ""
 
 def AcceptOfferedReservation(reservation_id: str):
+    """Accepts a reservation, making its status ASSIGNED.
+
+    Args:
+        reservation_id (str): A reservation ID (UUID).
+
+    Returns:
+        bool: True, if the reservation could be accepted. Otherwise, False.
+    """
 
     # TO-DO: function documentation
 
