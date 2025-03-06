@@ -532,7 +532,6 @@ def RejectOfferedReservation(reservation_id: str):
             logger.warning(f'Reservation with ID "{reservation_id}" is not in "RESERVED" status.')
             return False
         
-        #capacity["reservations"][reservation_id]["status"] = "assigned"
         del capacity["reservations"][reservation_id]
         logger.info(f'Reservation "{reservation_id}" found. Reservation deleted.')
         
