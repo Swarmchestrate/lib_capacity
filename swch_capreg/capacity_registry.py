@@ -320,7 +320,7 @@ def RemainingCapacity(capacity: dict):
     return remaining_capacity
 
 def GetReservationOffer(reservation: dict):
-    """Gets a reservation offer with the given resources. Initial reservation status is "reserved", if the reservation could be made.
+    """Gets a reservation offer for the given flavor(s). Initial reservation status is "reserved", if the reservation could be made.
 
     A reservation can be made, only and if only, enough free resources exist for the requested resource types.
     
