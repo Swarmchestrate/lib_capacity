@@ -542,6 +542,33 @@ def RejectOfferedReservation(reservation_id: str):
 
         return True
 
+def FreeUpAssignedReservation(reservation_id: str):
+    """Frees up a reservation (and related resources) that is in the ASSIGNED (!) state. Additionally, deletes the reservation from the capacity registry.
+
+    Args:
+        reservation_id (str): A reservation ID (UUID).
+
+    Returns:
+        bool: True, if the reservation was deleted successfully. Otherwise, False.
+    """
+
+    capacity = ReadCapacityRegistry()
+    reservation_exists = DoesReservationExist(reservation_id, capacity)
+
+    if reservation_exists != True:
+        return False
+    else:
+        if capacity["reservations"][reservation_id]["status"] != "assigned":
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "ASSIGNED" status.')
+            return False
+        
+        del capacity["reservations"][reservation_id]
+        logger.info(f'Reservation "{reservation_id}" found. Reservation destroyed, reserved resources are freed.')
+        
+        SaveCapacityRegistry(capacity)
+
+        return True
+
 def ReadCapacityRegistry():
     """Reads the capacity registry file.
 
