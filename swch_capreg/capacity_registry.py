@@ -596,6 +596,25 @@ def AllocateReservation(reservation_id: str):
 
         return True
 
+def DeallocateReservation(reservation_id: str):
+
+    capacity = ReadCapacityRegistry()
+    reservation_exists = DoesReservationExist(reservation_id, capacity)
+
+    if reservation_exists != True:
+        return False
+    else:
+        if capacity["reservations"][reservation_id]["status"] != "allocated":
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "ALLOCATED" status.')
+            return False
+        
+        capacity["reservations"][reservation_id]["status"] = "assigned"
+        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "ASSIGNED".')
+        
+        SaveCapacityRegistry(capacity)
+
+        return True
+
 def ReadCapacityRegistry():
     """Reads the capacity registry file.
 
