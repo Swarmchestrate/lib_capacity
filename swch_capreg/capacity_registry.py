@@ -569,6 +569,33 @@ def FreeUpAssignedReservation(reservation_id: str):
 
         return True
 
+def AllocateReservation(reservation_id: str):
+    """Makes a reservation move to the "ALLOCATED" state.
+
+    Args:
+        reservation_id (str): A reservation ID (UUID).
+
+    Returns:
+        bool: True, if the reservation could be moved to the allocated state. Otherwise, False.
+    """
+
+    capacity = ReadCapacityRegistry()
+    reservation_exists = DoesReservationExist(reservation_id, capacity)
+
+    if reservation_exists != True:
+        return False
+    else:
+        if capacity["reservations"][reservation_id]["status"] != "assigned":
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "ASSIGNED" status.')
+            return False
+        
+        capacity["reservations"][reservation_id]["status"] = "allocated"
+        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "ALLOCATED".')
+        
+        SaveCapacityRegistry(capacity)
+
+        return True
+
 def ReadCapacityRegistry():
     """Reads the capacity registry file.
 
