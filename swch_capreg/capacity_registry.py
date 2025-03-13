@@ -509,7 +509,7 @@ def AcceptOfferedReservation(reservation_id: str):
             return False
         
         capacity["reservations"][reservation_id]["status"] = "assigned"
-        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "ASSIGNED".')
+        logger.info(f'Reservation "{reservation_id}" found. Reservation accepted. Reservation status updated to "ASSIGNED".')
         
         SaveCapacityRegistry(capacity)
 
@@ -536,7 +536,7 @@ def RejectOfferedReservation(reservation_id: str):
             return False
         
         del capacity["reservations"][reservation_id]
-        logger.info(f'Reservation "{reservation_id}" found. Reservation deleted.')
+        logger.info(f'Reservation "{reservation_id}" found. Reservation rejected, reserved resources are freed.')
         
         SaveCapacityRegistry(capacity)
 
