@@ -459,16 +459,19 @@ def GetReservationOffer(reservation: dict):
         logger.info("Reservation cannot be made.")
         return ""
       
-def DoesReservationExist(reservation_id: str, capacity: dict):
+def DoesReservationExist(reservation_id: str, capacity: dict = None):
     """Check if the given a given reservation exists with the given ID (UUID).
 
     Args:
         reservation_id (str): A reservation ID (UUID).
-        capacity (dict): A dictionary containing the initial capacities and reservations. The current capacity registry.
+        capacity (dict, optional): A dictionary containing the initial capacities and reservations. The current capacity registry. Defaults to None.
 
     Returns:
         bool: True, if the a reservation with the given ID exists in the capacity registry. Otherwise, False.
     """
+
+    if (capacity == None):
+        capacity = ReadCapacityRegistry()
 
     if isinstance( reservation_id, str) == False:
         logger.error(f'Given reservation ID is not a string.')
