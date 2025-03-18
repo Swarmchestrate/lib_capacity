@@ -489,7 +489,7 @@ def DoesReservationExist(reservation_id: str, capacity: dict = None):
         return False
 
 def AcceptOfferedReservation(reservation_id: str):
-    """Accepts a reservation, making its status ASSIGNED.
+    """Accepts a reservation, making its status 'assigned'.
 
     Args:
         reservation_id (str): A reservation ID (UUID).
@@ -505,11 +505,11 @@ def AcceptOfferedReservation(reservation_id: str):
         return False
     else:
         if capacity["reservations"][reservation_id]["status"] != "reserved":
-            logger.warning(f'Reservation with ID "{reservation_id}" is not in "RESERVED" status.')
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "reserved" status.')
             return False
         
         capacity["reservations"][reservation_id]["status"] = "assigned"
-        logger.info(f'Reservation "{reservation_id}" found. Reservation accepted. Reservation status updated to "ASSIGNED".')
+        logger.info(f'Reservation "{reservation_id}" found. Reservation accepted. Reservation status updated to "assigned".')
         
         SaveCapacityRegistry(capacity)
 
@@ -532,7 +532,7 @@ def RejectOfferedReservation(reservation_id: str):
         return False
     else:
         if capacity["reservations"][reservation_id]["status"] != "reserved":
-            logger.warning(f'Reservation with ID "{reservation_id}" is not in "RESERVED" status.')
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "reserved" status.')
             return False
         
         del capacity["reservations"][reservation_id]
@@ -543,7 +543,7 @@ def RejectOfferedReservation(reservation_id: str):
         return True
 
 def FreeUpAssignedReservation(reservation_id: str):
-    """Frees up a reservation (and related resources) that is in the ASSIGNED (!) state. Additionally, deletes the reservation from the capacity registry.
+    """Frees up a reservation (and related resources) that is in the "assigned" (!) state. Additionally, deletes the reservation from the capacity registry.
 
     Args:
         reservation_id (str): A reservation ID (UUID).
@@ -559,7 +559,7 @@ def FreeUpAssignedReservation(reservation_id: str):
         return False
     else:
         if capacity["reservations"][reservation_id]["status"] != "assigned":
-            logger.warning(f'Reservation with ID "{reservation_id}" is not in "ASSIGNED" status.')
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "assigned" status.')
             return False
         
         del capacity["reservations"][reservation_id]
@@ -570,7 +570,7 @@ def FreeUpAssignedReservation(reservation_id: str):
         return True
 
 def AllocateReservation(reservation_id: str):
-    """Makes a reservation move to the "ALLOCATED" state.
+    """Makes a reservation move to the "allocated" state.
 
     Args:
         reservation_id (str): A reservation ID (UUID).
@@ -586,11 +586,11 @@ def AllocateReservation(reservation_id: str):
         return False
     else:
         if capacity["reservations"][reservation_id]["status"] != "assigned":
-            logger.warning(f'Reservation with ID "{reservation_id}" is not in "ASSIGNED" status.')
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "assigned" status.')
             return False
         
         capacity["reservations"][reservation_id]["status"] = "allocated"
-        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "ALLOCATED".')
+        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "allocated".')
         
         SaveCapacityRegistry(capacity)
 
@@ -605,11 +605,11 @@ def DeallocateReservation(reservation_id: str):
         return False
     else:
         if capacity["reservations"][reservation_id]["status"] != "allocated":
-            logger.warning(f'Reservation with ID "{reservation_id}" is not in "ALLOCATED" status.')
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "allocated" status.')
             return False
         
         capacity["reservations"][reservation_id]["status"] = "assigned"
-        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "ASSIGNED".')
+        logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "assigned".')
         
         SaveCapacityRegistry(capacity)
 
