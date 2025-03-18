@@ -542,8 +542,8 @@ def RejectOfferedReservation(reservation_id: str):
 
         return True
 
-def FreeUpAssignedReservation(reservation_id: str):
-    """Frees up a reservation (and related resources) that is in the "assigned" (!) state. Additionally, deletes the reservation from the capacity registry.
+def AppHasBeenDestroyed(reservation_id: str):
+    """Frees up a reservation (and related resources) that is in the "assigned" or "reserved" state. Deletes the reservation from the capacity registry.
 
     Args:
         reservation_id (str): A reservation ID (UUID).
@@ -558,8 +558,8 @@ def FreeUpAssignedReservation(reservation_id: str):
     if reservation_exists != True:
         return False
     else:
-        if capacity["reservations"][reservation_id]["status"] != "assigned":
-            logger.warning(f'Reservation with ID "{reservation_id}" is not in "assigned" status.')
+        if (capacity["reservations"][reservation_id]["status"] not in ["assigned", "reserved"]):
+            logger.warning(f'Reservation with ID "{reservation_id}" is not in "assigned" or "reserved" status.')
             return False
         
         del capacity["reservations"][reservation_id]
