@@ -750,11 +750,10 @@ def GetCapacityRegistryInfo():
 
     print(f"\r\n\tTotal number of reservations: {no_of_reservations}")
 
+    print("\r\n\tRaw resources:")
+    print("\tType\t\tAll\tReserv.\tFree\t(% free)")
 
     if (capacity["initial"]["raw"] is not None):
-        print("\r\n\tRaw resources:")
-        print("\tType\t\tAll\tReserv.\tFree\t(% free)")
-
         # Listing raw resources  
         for act_resource_type, act_resource_amount in capacity["initial"]["raw"].items():
             try:
@@ -764,7 +763,11 @@ def GetCapacityRegistryInfo():
             except KeyError:
                 print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t0\t0')
     else:
-         print("\r\n\tThere were no raw resources defined.")
+        total = "n/a"
+        percentage = "n/a"
+        free = "n/a"
+        for act_resource_type, act_resource_amount in total_reserved["raw"].items():
+            print(f'\t{act_resource_type.upper()}\t\t{total}\t{act_resource_amount}\t{free}\t{percentage}')
     
     # Listing flavor resources
     print("\r\n\tDefined flavors:")
