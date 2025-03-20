@@ -1,16 +1,18 @@
 # Importing the Capacity Registry module
 import swch_capreg.capacity_registry as CapReg
 
+# Example 1
 def Example_1():
+
     # Example flavor dictionary for initialization
     flavor_init_dict = {
-        "m1.medium": {
+        "m1.medium": {          # Necessary key, must be string
             "config": {
-                "cpu": 4,
-                "ram": 8,
-                "disk": 100
+                "cpu": 4,       # Necessary key, value must be integer
+                "ram": 8,       # Necessary key, value must be integer (in GB)
+                "disk": 100     # Necessary key, value must be integer (in GB)
                 },
-            "amount": 5
+            "amount": 5         # Optional, value must be integer
             },
 
         "l1.large": {
@@ -18,7 +20,7 @@ def Example_1():
                 "cpu": 8,
                 "ram": 32,
                 "disk": 200,
-                "pub_ip": 1
+                "pub_ip": 1     # Optional key, value must be integer
                 },
             "amount": 2
             },
@@ -33,10 +35,10 @@ def Example_1():
             }
         }
 
-    # Initializing the capacity register with given initial flavors and configurations
+    # Initializing the capacity registry with given initial flavors
     CapReg.Initialize(flavor_capacity=flavor_init_dict)
 
-    # Printing information about the capacity registry
+    # Getting info about the capacity registry
     CapReg.GetCapacityRegistryInfo()
 
     # Example reservation dictionary
@@ -71,7 +73,7 @@ def Example_1():
     # Moving a reservation from the 'assigned' state into the 'allocated' state
     CapReg.AllocateReservation(reservation_id)
 
-    # Deallocating a reservation. This moves the reservation from the status 'allocated' to 'assigned'
+    # Deallocating a reservation. This moves the reservation from the 'allocated' status to 'assigned'
     CapReg.DeallocateReservation(reservation_id)
 
     # Free up resources after an app was destroyed. This only works if the reservation status is either 'reserved' or 'assigned'
@@ -81,6 +83,7 @@ def Example_1():
     CapReg.GetCapacityRegistryInfo()
 
 def Example_2():
+
     # Example flavor dictionary for initialization
     flavor_init_dict = {
         "m1.medium": {
@@ -110,6 +113,8 @@ def Example_2():
         }
     
     # Example raw resource dictionary for initialization
+    # IMPORTANT: all raw resource types must be present in the dictionary that may occur within a flavor's configuration.
+    #            Minimum amount for a raw resource is the minimum amount that may occur within a flavor's configuration.
     raw_init_dict = {
         "cpu": 100,
         "ram": 100,
