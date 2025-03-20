@@ -33,7 +33,7 @@ def Example_1():
             }
         }
 
-    # Initializing the capacity register with given initial resources and configurations
+    # Initializing the capacity register with given initial flavors and configurations
     CapReg.Initialize(flavor_capacity=flavor_init_dict)
 
     # Printing information about the capacity registry
