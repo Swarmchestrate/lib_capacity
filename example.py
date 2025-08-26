@@ -136,17 +136,29 @@ def Example_2():
     # Example reservation dictionary
     flavor_reservation = { "flavor":
         {
-            "l1.large": 2,
-            "m1.medium": 1,
-            "s1.small": 5
+            "l1.large": 1,
+            "m1.medium": 1
             }
         }
     
     # Making a reservation. Initial reservation status is 'reserved'
     reservation_id = CapReg.GetReservationOffer(res=flavor_reservation)
 
+    # Checking information about the capacity registry
+    CapReg.GetCapacityRegistryInfo()
+
     # Rejecting a reservation
     CapReg.RejectOfferedReservation(reservation_id)
+    CapReg.GetCapacityRegistryInfo()
+
+    # Making a new reservation offer with the same requested flavours and amounts
+    reservation_id = CapReg.GetReservationOffer(res=flavor_reservation)
+
+    # Accepting the offered reservation
+    CapReg.AcceptOfferedReservation(reservation_id)
+
+    # Checking information about the reservation
+    CapReg.GetReservationInfo(reservation_id)
 
     # Checking information about the capacity registry
     CapReg.GetCapacityRegistryInfo()
@@ -158,16 +170,17 @@ def Example_2():
             "s1.small": 11
         }
     }
-    reservation_id = CapReg.GetReservationOffer(res=flavor_reservation_2)
+    reservation_id_2 = CapReg.GetReservationOffer(res=flavor_reservation_2)
 
     # Checking information about the reservation
-    CapReg.GetReservationInfo(reservation_id)
+    CapReg.GetReservationInfo(reservation_id_2)
 
     # Accepting the offered reservation
-    CapReg.AcceptOfferedReservation(reservation_id)
+    CapReg.AcceptOfferedReservation(reservation_id_2)
 
     # Free up resources after an app was destroyed
     CapReg.AppHasBeenDestroyed(reservation_id)
+    CapReg.AppHasBeenDestroyed(reservation_id_2)
 
     # Checking information about the capacity registry
     CapReg.GetCapacityRegistryInfo()
