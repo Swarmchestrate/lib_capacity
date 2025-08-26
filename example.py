@@ -50,13 +50,20 @@ def Example_1():
         }
     
     # Making a reservation. Initial reservation status is 'reserved'
-    reservation_id = CapReg.GetReservationOffer(reservation=flavor_reservation)
+    reservation_id = CapReg.GetReservationOffer(res=flavor_reservation)
 
-    # Getting info about a reservation
+    # Getting info about a reservation offer
     CapReg.GetReservationInfo(reservation_id)
+
+    # Rejecting a reservation offer.
+    CapReg.RejectOfferedReservation(reservation_id)
+
+    # Making another reservation and getting an offer
+    reservation_id = CapReg.GetReservationOffer(res=flavor_reservation)
 
     # Accepting a reservation offer. This moves the reservation from the 'reserved' status to 'assigned'
     CapReg.AcceptOfferedReservation(reservation_id)
+    CapReg.GetReservationInfo(reservation_id)
 
     # Trying to make another reservation. Requesting more resources than available
     flavor_reservation_2 = { "flavor":
@@ -65,7 +72,7 @@ def Example_1():
             "s1.small": 11
         }
     }
-    CapReg.GetReservationOffer(flavor_reservation_2)
+    CapReg.GetReservationOffer(res=flavor_reservation_2)
 
     # Checking if a given reservation with an ID exists
     CapReg.DoesReservationExist(reservation_id)
@@ -136,7 +143,7 @@ def Example_2():
         }
     
     # Making a reservation. Initial reservation status is 'reserved'
-    reservation_id = CapReg.GetReservationOffer(reservation=flavor_reservation)
+    reservation_id = CapReg.GetReservationOffer(res=flavor_reservation)
 
     # Rejecting a reservation
     CapReg.RejectOfferedReservation(reservation_id)
@@ -151,7 +158,7 @@ def Example_2():
             "s1.small": 11
         }
     }
-    reservation_id = CapReg.GetReservationOffer(flavor_reservation_2)
+    reservation_id = CapReg.GetReservationOffer(res=flavor_reservation_2)
 
     # Checking information about the reservation
     CapReg.GetReservationInfo(reservation_id)
