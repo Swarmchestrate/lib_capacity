@@ -130,7 +130,7 @@ def Example_2():
         }
     
     # Initializing with a flavor and a raw resource dictionary
-    # Keep in mind, that there were no amount defined for the flavors
+    # Keep in mind, that there were no 'amount' defined for the flavors
     CapReg.Initialize(flavor_capacity=flavor_init_dict, raw_capacity=raw_init_dict)
 
     # Example reservation dictionary
