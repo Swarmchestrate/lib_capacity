@@ -12,215 +12,179 @@ logging.basicConfig(
     )
 
 # Constants
-MAIN_RESOURCE_TYPES =       ["raw", "flavor"]                       # May expand in the future
-RAW_RESOURCE_TYPES =        ["cpu", "ram", "disk", "pub_ip"]        # May expand in the future
-FLAVOR_CONFIG_KEYS_MIN =    ["cpu", "ram", "disk"]                  # May expand in the future
-FLAVOR_TYPE_KEYS =          ["config", "amount"]                    # May expand in the future
+RESOURCE_TYPES_RAW    = ["cpu", "ram", "disk", "pub_ip"]        # May expand in the future
+RESOURCE_TYPES_FLAVOR = ["cpu", "ram", "disk"]                  # May expand in the future
 
-def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
-    """Initializes a capacity registry file with the given initial flavors. A dictionary containing the initial flavors is required for initialization.
+def Initialize(flavor_definition: dict, capacity_by: dict = None):
+    """Initializes a capacity registry file with the given flavor definitions and
+    either per-flavor amounts or raw totals.
 
     Args:
-        flavor_capacity (dict): A dictionary containing flavor (VM) types (eg.: m1.medium, l1.large, s1.small etc.).
-        raw_capacity (dict, optional): A dictionary containing raw resource types (eg.: disk, CPU, RAM, public IPs etc.). Defaults to None.
-    
+        flavor_definition (dict): A dictionary containing flavor (VM) types' configs
+            (eg.: m1.medium, l1.large, s1.small etc.).
+        capacity_by (dict, optional): Either a per-flavor amounts dict
+            (e.g. {"m1.medium": 5, ...}) or a raw totals dict
+            (e.g. {"cpu": 100, "ram": 100, ...}).
+
     Returns:
         bool: True if the initialization was successful, otherwise, False.
     """
-
-    def ValidateInitializationRawDict(raw_capacity: dict):
-        """Validates a given (initial) raw capacity dictionary.
-
-        Args:
-            raw_capacity (dict): A dictionary defining raw resources (eg.: disk, CPU, RAM, public IPs etc.).
-
-        Returns:
-            bool: True, if the given raw capacity dictionary complies with the required format. Otherwise, False.
-        """
-
-        # Check if not dict
-        if isinstance( raw_capacity, dict ) == False:
-            logger.error("Input initial raw capacity is not a dict.")
-            return False
-
-        # Check if empty
-        if raw_capacity == {}:
-            logger.error("Input initial raw capacity is empty.")
-            return False
-        
-        # Check keys
-        for init_raw_type in raw_capacity.keys():
-
-            # Check if not string
-            if isinstance( init_raw_type, str) == False:
-                logger.error(f'Raw resource dictionary key "{init_raw_type}" is not a string.')
-                return False
-
-            # Check if unknown raw resource type
-            if init_raw_type not in RAW_RESOURCE_TYPES:
-                logger.error(f'Unknown raw resource type "{init_raw_type}".')
-                return False
-            else:
-                # Check if integer
-                if isinstance( raw_capacity[init_raw_type], int ) == False:
-                    logger.error(f'Raw resource type "{init_raw_type}" is not an integer.')
-                    return False
-                elif isinstance( raw_capacity[init_raw_type], bool ) == True:
-                    logger.error(f'Raw resource type "{init_raw_type}" is not an integer.')
-                    return False
-                
-                # Check if 1 or higher
-                if raw_capacity[init_raw_type] < 1:
-                    logger.error(f'Amount of initial raw resource type "{init_raw_type}" must be 1 or higher.')
-                    return False
-        
-        return True
-    
-    def ValidateInitializationFlavorDict(flavor_capacity: dict, raw_given: bool = False):
-        """Validates a given (initial) flavor types dictionary.
+   
+    def ValidateFlavorDefinition(flavor_definition: dict):
+        """Validates a given flavor definition dictionary.
 
         Args:
-            flavor_capacity (dict): A dictionary containing flavor (VM) types (eg.: m1.medium, l1.large, s1.small etc.).
-            raw_given (bool, optional): A bool value, describing if a raw capacity dictionary was given during initialization. Defaults to False.
+            flavor_definition (dict): A dictionary containing flavor (VM) types (eg.: m1.medium, l1.large, s1.small etc.).
 
         Returns:
             bool: True, if the given flavor types dictionary complies with the required format. Otherwise, False.
         """
 
-        # Check if dict
-        if isinstance( flavor_capacity, dict ) == False:
-            logger.error("Input initial flavor capacity is not a dict.")
-            return False
-
-        # Check if empty
-        if flavor_capacity == {}:
-            logger.error("Input initial flavor capacity is empty.")
-            return False
-    
         # Check flavor keys
-        for init_flavor_type in flavor_capacity.keys():
-
+        for a_flavor in flavor_definition.keys():
             # Check if key is not string
-            if isinstance( init_flavor_type, str) == False:
-                logger.error(f'Flavor type key "{init_flavor_type}" is not a string.')
+            if isinstance( a_flavor, str) == False:
+                logger.error(f'Flavor "{a_flavor}" is not a string.')
                 return False
             
             # Check if flavor is not dict
-            if isinstance( flavor_capacity[init_flavor_type], dict) == False:
-                logger.error(f'Flavor type definition for "{init_flavor_type}" is not a dict.')
+            if isinstance( flavor_definition[a_flavor], dict) == False:
+                logger.error(f'Flavor definition for "{a_flavor}" is not a dict.')
                 return False
             
             # Check if flavor is not dict
-            if flavor_capacity[init_flavor_type] == {}:
-                logger.error(f'Flavor type definition for "{init_flavor_type}" is empty.')
+            if flavor_definition[a_flavor] == {}:
+                logger.error(f'Flavor definition for "{a_flavor}" is empty.')
                 return False
-            
-            # Check for unknown keys in flavor
-            for flavor_key in flavor_capacity[init_flavor_type].keys():
-                if flavor_key not in FLAVOR_TYPE_KEYS:
-                    logger.error(f'Uknown key "{flavor_key}" defined for flavor type "{init_flavor_type}".')
+               
+            # Check for necessary keys in flavor's config
+            for resource_key in RESOURCE_TYPES_FLAVOR:
+                if resource_key not in flavor_definition[a_flavor].keys():
+                    logger.error(f'No resource "{resource_key}" defined for flavor "{a_flavor}".')
                     return False
             
-            # Check for necessary keys
-            if "config" not in flavor_capacity[init_flavor_type].keys():
-                logger.error(f'No "config" defined for flavor type "{init_flavor_type}".')
-                return False
-            else:
-                # Check if config not dict
-                if isinstance(flavor_capacity[init_flavor_type]["config"], dict) == False:
-                    logger.error(f'Config defined for flavor type "{init_flavor_type}" is not a dictionary.')
+            # Check for unknown keys in flavor's config
+            for resource_key in flavor_definition[a_flavor].keys():
+                if resource_key not in RESOURCE_TYPES_RAW:
+                    logger.error(f'Unknown resource "{resource_key}" defined for flavor "{a_flavor}".')
                     return False
-                
-                # Check if config is empty
-                if flavor_capacity[init_flavor_type]["config"] == {}:
-                    logger.error(f'Config defined for flavor type "{init_flavor_type}" is empty.')
-                    return False
-                
-                # Check for nevessary keys in flavor's config
-                for config_key in FLAVOR_CONFIG_KEYS_MIN:
-                    if config_key not in flavor_capacity[init_flavor_type]["config"].keys():
-                        logger.error(f'No key "{config_key}" defined in the config of flavor type "{init_flavor_type}".')
-                        return False
-            
-                # Check for unknown keys in flavor's config
-                for config_key in flavor_capacity[init_flavor_type]["config"].keys():
-                    if config_key not in RAW_RESOURCE_TYPES:
-                        logger.error(f'Unknown configuration key "{config_key}" defined in flavor "{init_flavor_type}".')
-                        return False
-                    else:
-                        # Check if integer
-                        if isinstance( flavor_capacity[init_flavor_type]["config"][config_key], int ) == False:
-                            logger.error(f'Config key "{config_key}" defined for flavor "{init_flavor_type}" is not an integer.')
-                            return False
-                        
-                        # Check if bool
-                        if isinstance( flavor_capacity[init_flavor_type]["config"][config_key], bool ) == True:
-                            logger.error(f'Config key "{config_key}" defined for flavor "{init_flavor_type}" is not an integer.')
-                            return False
-                        
-                        # Check if over 1
-                        if flavor_capacity[init_flavor_type]["config"][config_key] < 1:
-                            logger.error(f'Config key "{config_key}" must be 1 or higher for flavor "{init_flavor_type}".')
-                            return False
-            
-            if raw_given == True:
-                if "amount" in flavor_capacity[init_flavor_type].keys():
-                    logger.error(f'Raw resources were given. No "amount" key is necessary for flavor type "{init_flavor_type}".')
-                    return False
-            else:
-                if "amount" not in flavor_capacity[init_flavor_type].keys():
-                    logger.error(f'No "amount" key is given for flavor type "{init_flavor_type}".')
-                    return False
-
-                # Check "amount" key and value
-                if "amount" in flavor_capacity[init_flavor_type].keys():
+                else:
                     # Check if integer
-                    if isinstance( flavor_capacity[init_flavor_type]["amount"], int ) == False:
-                        logger.error(f'Amount defined for flavor "{init_flavor_type}" is not an integer.')
+                    if isinstance( flavor_definition[a_flavor][resource_key], int ) == False:
+                        logger.error(f'Resource "{resource_key}" defined for flavor "{a_flavor}" is not an integer.')
                         return False
                     
                     # Check if bool
-                    if isinstance( flavor_capacity[init_flavor_type]["amount"], bool ) == True:
-                        logger.error(f'Amount defined for flavor "{init_flavor_type}" is not an integer.')
+                    if isinstance( flavor_definition[a_flavor][resource_key], bool ) == True:
+                        logger.error(f'Resource "{resource_key}" defined for flavor "{a_flavor}" is not an integer.')
                         return False
                     
                     # Check if over 1
-                    if flavor_capacity[init_flavor_type]["amount"] < 1:
-                        logger.error(f'Invalid amount defined for flavor "{init_flavor_type}".')
+                    if flavor_definition[a_flavor][resource_key] < 1:
+                        logger.error(f'Resource "{resource_key}" must be 1 or higher for flavor "{a_flavor}".')
                         return False
-    
-    # TO-DO: include example for usage in documentation
-    # TO-DO: include option to init from yaml file
 
-    if (flavor_capacity == None):
+    def ValidateCapacity(capacity: dict, flavor_definition: dict, raw: bool):
+        """Validates a given raw capacity dictionary.
+
+        Args:
+            capacity (dict): A dictionary defining raw resources (eg.: disk, CPU, RAM, public IPs etc.).
+            flavor_definition (dict): A dictionary containing flavor (VM) types (eg.: m1.medium, l1.large, s1.small etc.).
+            raw (bool): Whether the capacity dict is raw totals (True) or per-flavor amounts (False).
+
+        Returns:
+            bool: True, if the given capacity dictionary complies with the required format. Otherwise, False.
+        """
+
+        # Check if empty
+        if capacity == {}:
+            logger.error("Input capacity is empty.")
+            return False        
+        # Check keys
+        resource_keys = set(RESOURCE_TYPES_RAW) if raw else set(flavor_definition.keys())
+        for resource in resource_keys:
+            # Check if not string
+            if isinstance( resource, str) == False:
+                logger.error(f'Resource "{resource}" is not a string.')
+                return False
+
+            # Check if unknown raw resource type
+            if raw and resource not in RESOURCE_TYPES_RAW:
+                logger.error(f'Unknown raw resource type "{resource}".')
+                return False
+            else:
+                # Check if integer
+                if isinstance( capacity[resource], int ) == False:
+                    logger.error(f'Resource "{resource}" is not an integer.')
+                    return False
+                elif isinstance( capacity[resource], bool ) == True:
+                    logger.error(f'Resource "{resource}" is not an integer.')
+                    return False                
+                # Check if 1 or higher
+                if capacity[resource] < 1:
+                    logger.error(f'Amount resource "{resource}" must be 1 or higher.')
+                    return False
+        
+        return True
+    
+    # Basic presence check
+    if (flavor_definition == None):
         logger.error("No flavor types are defined. Please define the initial flavors!")
         return False
-    else:
-        if (raw_capacity != None):
-            # TO-DO: Check if the raw resources initial dictionary contains all the necessary resources types (and the minimal amount) that occur in the flavors
-            if ValidateInitializationRawDict(raw_capacity) == False:
-                logger.info('Invalid initial raw resource dictionary. Initialization was unsuccessful.')
-                return False
-            
-            if ValidateInitializationFlavorDict(flavor_capacity, raw_given=True) == False:
-                logger.info('Invalid initial flavor dictionary. Initialization was unsuccessful.')
-                return False
-        else:
-            if ValidateInitializationFlavorDict(flavor_capacity, raw_given=False) == False:
-                logger.info('Invalid initial flavor dictionary. Initialization was unsuccessful.')
-                return False
-    
-    logger.info('Initializing capacity registry...')
 
+    # Basic presence check
+    if (capacity_by == None):
+        logger.error("No capacity is defined. Please define the initial capacities!")
+        return False
+    
+    # Determine whether capacity_by contains raw totals or per-flavor amounts
+    capacity_type_raw = False
+
+    if isinstance(flavor_definition, dict) == False:
+        logger.error('Parameter flavor_definition is not a dict.')
+        return False
+    
+    if isinstance(capacity_by, dict) == False:
+        logger.error('Parameter capacity_by is not a dict.')
+        return False
+
+    if not capacity_by:
+        logger.error("No capacity is defined. Please define the initial capacities!")
+        return False
+
+    keys = set(capacity_by.keys())
+    if keys and all(k in RESOURCE_TYPES_RAW for k in keys):
+        capacity_type_raw = True
+    elif keys and all(k in flavor_definition.keys() for k in keys):
+        capacity_type_raw = False
+    else:
+        logger.error('Second parameter must be either a raw resource totals dict or a per-flavor amounts dict.')
+        return False
+
+    # Validate inputs
+
+    # Validate flavor definitions;
+    if ValidateFlavorDefinition(flavor_definition) == False:
+        logger.info('Invalid input flavor definition. Initialization was unsuccessful.')
+        return False
+
+    # Validate raw totals and flavor definitions (no amounts expected in flavors)
+    if ValidateCapacity(capacity_by, flavor_definition, capacity_type_raw) == False:
+        logger.info('Invalid capacity definition. Initialization was unsuccessful.')
+        return False
+   
+    logger.info('Initializing capacity registry...')
     capacity = {
         "initial": {},
         "reservations": {}
         }
-    
-    capacity["initial"]["raw"] = raw_capacity
-    capacity["initial"]["flavor"] = flavor_capacity
+    capacity["initial"]["raw"] = capacity_by if capacity_type_raw else None
+    capacity["initial"]["flavor"] = flavor_definition
+    capacity["initial"]["flavor_amounts"] = capacity_by if not capacity_type_raw else None
 
     # TO-DO: ask for permission to reinitialize
+    logger.info("Saving capacity into file...")
+    logger.info(f'Capacity info:\n"{capacity}"\n')
     with open("capreg.yaml", "w") as file:
         try:
             file.write( yaml.dump(capacity) )
@@ -230,7 +194,7 @@ def Initialize(flavor_capacity: dict, raw_capacity: dict = None):
             # TO-DO: error handling
 
             return False
-        
+
     logger.info('Successfully initialized capacity registry!')
     return True
 
@@ -252,7 +216,7 @@ def SummarizeAllReservations(capacity: dict):
     for flavor_type in capacity["initial"]["flavor"].keys():
         total_reservations["flavor"][flavor_type] = 0
 
-        for raw_res_type in capacity["initial"]["flavor"][flavor_type]["config"]:
+        for raw_res_type in capacity["initial"]["flavor"][flavor_type]:
             if raw_res_type not in total_reservations["raw"].keys():
                 total_reservations["raw"][raw_res_type] = 0
 
@@ -269,7 +233,7 @@ def SummarizeAllReservations(capacity: dict):
                         total_reservations["flavor"][flavor_type] = 0
                         total_reservations["flavor"][flavor_type] += amount
                     
-                    for raw_res_type, config_amount in capacity["initial"]["flavor"][flavor_type]["config"].items():
+                    for raw_res_type, config_amount in capacity["initial"]["flavor"][flavor_type].items():
                         try:
                             total_reservations["raw"][raw_res_type] += (amount * config_amount)
                         except KeyError:
@@ -295,9 +259,9 @@ def RemainingCapacity(capacity: dict):
         "raw" : {}
         }
     
-    raw_given = False if capacity["initial"]["raw"] == None else True
+    capacity_type_raw = False if capacity["initial"]["raw"] == None else True
     
-    if raw_given == True:
+    if capacity_type_raw == True:
         
         for raw_res_type in capacity["initial"]["raw"].keys():
             remaining_capacity["raw"][raw_res_type] = capacity["initial"]["raw"][raw_res_type]
@@ -309,12 +273,18 @@ def RemainingCapacity(capacity: dict):
             remaining_capacity["raw"][raw_res_type] -= total_reservations["raw"][raw_res_type]
         
     else:
+        flavor_amounts = capacity["initial"].get("flavor_amounts")
+
         for flavor_type in capacity["initial"]["flavor"].keys():
-            for raw_res_type in capacity["initial"]["flavor"][flavor_type]["config"].keys():
+            for raw_res_type in capacity["initial"]["flavor"][flavor_type].keys():
                 remaining_capacity["raw"][raw_res_type] = -1
-            
-            remaining_capacity["flavor"][flavor_type] = capacity["initial"]["flavor"][flavor_type]["amount"]
-        
+
+            # Read from new mapping or fallback to old inlined amount
+            if flavor_amounts is not None:
+                remaining_capacity["flavor"][flavor_type] = flavor_amounts.get(flavor_type, 0)
+            else:
+                remaining_capacity["flavor"][flavor_type] = capacity["initial"]["flavor"][flavor_type].get("amount", 0)
+
         for flavor_type in total_reservations["flavor"].keys():
             remaining_capacity["flavor"][flavor_type] -= total_reservations["flavor"][flavor_type]
     
@@ -415,11 +385,11 @@ def GetReservationOffer(res: dict):
 
             if req_res_type == "flavor":
                 
-                raw_given = False if capacity["initial"]["raw"] == None else True
+                capacity_type_raw = False if capacity["initial"]["raw"] == None else True
 
-                if raw_given == True:
+                if capacity_type_raw == True:
                     for req_flavor in reservation["flavor"].keys():
-                        flavor_config = copy.deepcopy( capacity["initial"]["flavor"][req_flavor]["config"] )
+                        flavor_config = copy.deepcopy( capacity["initial"]["flavor"][req_flavor] )
 
                         for res_type, res_amount in flavor_config.items():
 
@@ -685,7 +655,7 @@ def GetReservationInfo(reservation_id: str):
         for flavor_type in capacity["reservations"][reservation_id]["flavor"].keys():
             total_reservations["flavor"][flavor_type] = 0
 
-            for raw_res_type in capacity["initial"]["flavor"][flavor_type]["config"]:
+            for raw_res_type in capacity["initial"]["flavor"][flavor_type]:
                 if raw_res_type not in total_reservations["raw"].keys():
                     total_reservations["raw"][raw_res_type] = 0
 
@@ -700,7 +670,7 @@ def GetReservationInfo(reservation_id: str):
                         total_reservations["flavor"][flavor_type] = 0
                         total_reservations["flavor"][flavor_type] += amount
                     
-                    for raw_res_type, config_amount in capacity["initial"]["flavor"][flavor_type]["config"].items():
+                    for raw_res_type, config_amount in capacity["initial"]["flavor"][flavor_type].items():
                         try:
                             total_reservations["raw"][raw_res_type] += (amount * config_amount)
                         except KeyError:
@@ -749,15 +719,29 @@ def GetCapacityRegistryInfo():
     total_reserved = SummarizeAllReservations(capacity)
     no_of_reservations = len( capacity["reservations"].keys() )
 
-    logger.info('Listing all resource capacities.')
+    logger.info('Listing capacity registry information.')
+    print(f"\r\n\tFlavor definitions:")
+    print("\tFlavor\t\tCPU\tDISK\tRAM\tPUB_IP")
+    for act_flavor_type, act_flavor_data in capacity["initial"]["flavor"].items():
+        print(f'\t{act_flavor_type.upper()}',end='')
+        print(f'\t{act_flavor_data["cpu"]}',end='')
+        print(f'\t{act_flavor_data["disk"]}',end='')
+        print(f'\t{act_flavor_data["ram"]}',end='')
+        print(f'\t{act_flavor_data["pub_ip"] if "pub_ip" in act_flavor_data else ""}')
 
-    print(f"\r\n\tTotal number of reservations: {no_of_reservations}")
-
-    print("\r\n\tRaw resources:")
-    print("\tType\t\tAll\tReserv.\tFree\t(% free)")
+    print(f"\r\n\tReservations:\t{no_of_reservations}")
+    for id, value in capacity["reservations"].items():
+        print(f'\t{id.upper()}')
+        print(f'\t\t{value["status"]}')
+        print(f'\t\t',end='')
+        for key, value in value["flavor"].items():
+            print(f'{key.upper()}: {value}',end=' ')
+        print()
 
     if (capacity["initial"]["raw"] is not None):
         # Listing raw resources  
+        print("\r\n\tCapacity by raw:")
+        print("\tType\t\tAll\tReserv.\tFree\t(% free)")
         for act_resource_type, act_resource_amount in capacity["initial"]["raw"].items():
             try:
                 percentage = '{:.1%}'.format(1 - (total_reserved["raw"][act_resource_type] / act_resource_amount) )
@@ -766,26 +750,20 @@ def GetCapacityRegistryInfo():
             except KeyError:
                 print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t0\t0')
     else:
-        total = "n/a"
-        percentage = "n/a"
-        free = "n/a"
-        for act_resource_type, act_resource_amount in total_reserved["raw"].items():
-            print(f'\t{act_resource_type.upper()}\t\t{total}\t{act_resource_amount}\t{free}\t{percentage}')
-    
-    # Listing flavor resources
-    print("\r\n\tDefined flavors:")
-    print("\tFlavor\t\tAll\tReserv.\tFree\t(% free)")
-
-    for act_flavor_type, act_flavor_data in capacity["initial"]["flavor"].items():
-        percentage = 0
-        free = 0
-        try:
-            percentage = '{:.1%}'.format(1 - (total_reserved["flavor"][act_flavor_type] / act_flavor_data["amount"]) )
-            free = act_flavor_data["amount"] - total_reserved["flavor"][act_flavor_type]
-            print(f'\t{act_flavor_type.upper()}\t{act_flavor_data["amount"]}\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
-        except KeyError:
-            percentage = "n/a"
-            free = "n/a"
-            print(f'\t{act_flavor_type.upper()}\tn/a\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
+        # Listing flavor resources
+        print("\r\n\tCapacity by flavors:")
+        print("\tFlavor\t\tAll\tReserv.\tFree\t(% free)")
+        for act_flavor_type, act_flavor_data in capacity["initial"]["flavor"].items():
+            percentage = 0
+            free = 0
+            cap_amount = capacity['initial'].get('flavor_amounts', {}).get(act_flavor_type, None)
+            try:
+                percentage = '{:.1%}'.format(1 - (total_reserved["flavor"][act_flavor_type] / cap_amount) )
+                free = cap_amount - total_reserved["flavor"][act_flavor_type]
+                print(f'\t{act_flavor_type.upper()}\t{cap_amount}\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
+            except KeyError:
+                percentage = "n/a"
+                free = "n/a"
+                print(f'\t{act_flavor_type.upper()}\tn/a\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
     
     print()
