@@ -3,6 +3,7 @@ import copy
 import logging
 import uuid
 import yaml
+from sardou import Sardou
 
 
 
@@ -23,11 +24,25 @@ class SwChCapacityRegistry:
     def __init__(self):
         pass
 
-    def Initialize(self, flavor_definition: dict, capacity_by: dict = None):
+    def extract_capacity_definitions_from_tosca(self, capacity_description_filename: str):
+        tosca = Sardou(capacity_description_filename)
+
+        return True
+
+    def extract_application_requirements_from_SAT(self, application_description_filename: str):
+        tosca = Sardou(application_description_filename)
+        nodes = tosca.raw._to_dict().get('service_template', {}).get('node_templates', {})
+        requirements = dict()
+        for node_name, node in nodes.items():
+            if 'requirements' in node:
+                requirements[node_name] = node['requirements']
+        return requirements
+
+    def initialize(self, flavor_definition: dict, capacity_by: dict = None):
         """Initializes a capacity registry file with the given flavor definitions and
         either per-flavor amounts or raw totals.
         """
-        if self.ValidateFlavorDefinition(flavor_definition) == False:
+        if self.validate_flavor_definition(flavor_definition) == False:
             self.logger.info('Invalid input flavor definition. Initialization was unsuccessful.')
             return False
         if (flavor_definition is None):
@@ -54,7 +69,7 @@ class SwChCapacityRegistry:
         else:
             self.logger.error('Second parameter must be either a raw resource totals dict or a per-flavor amounts dict.')
             return False
-        if self.ValidateCapacity(capacity_by, flavor_definition, capacity_type_raw) == False:
+        if self.validate_capacity(capacity_by, flavor_definition, capacity_type_raw) == False:
             self.logger.info('Invalid capacity definition. Initialization was unsuccessful.')
             return False
         self.logger.info('Initializing capacity registry...')
@@ -77,7 +92,7 @@ class SwChCapacityRegistry:
         self.logger.info('Successfully initialized capacity registry!')
         return True
 
-    def ValidateFlavorDefinition(self, flavor_definition: dict):
+    def validate_flavor_definition(self, flavor_definition: dict):
         for a_flavor in flavor_definition.keys():
             if not isinstance(a_flavor, str):
                 self.logger.error(f'Flavor "{a_flavor}" is not a string.')
@@ -108,7 +123,7 @@ class SwChCapacityRegistry:
                         return False
         return True
 
-    def ValidateCapacity(self, capacity: dict, flavor_definition: dict, raw: bool):
+    def validate_capacity(self, capacity: dict, flavor_definition: dict, raw: bool):
         if capacity == {}:
             self.logger.error("Input capacity is empty.")
             return False
@@ -135,7 +150,7 @@ class SwChCapacityRegistry:
     # ...existing code...
 
 
-    def SummarizeAllReservations(self, capacity: dict):
+    def summarize_all_reservations(self, capacity: dict):
         """Summarizes all reserved resources."""
         total_reservations = {
             "flavor": {},
@@ -163,8 +178,8 @@ class SwChCapacityRegistry:
                                 total_reservations["raw"][raw_res_type] += (amount * config_amount)
         return total_reservations
 
-    def RemainingCapacity(self, capacity: dict):
-        total_reservations = self.SummarizeAllReservations(capacity)
+    def remaining_capacity(self, capacity: dict):
+        total_reservations = self.summarize_all_reservations(capacity)
         remaining_capacity = {
             "flavor": {},
             "raw" : {}
@@ -190,13 +205,13 @@ class SwChCapacityRegistry:
                 remaining_capacity["flavor"][flavor_type] -= total_reservations["flavor"][flavor_type]
         return remaining_capacity
 
-    def GetReservationOffer(self, res: dict):
+    def get_reservation_offer(self, res: dict):
         reservation = copy.deepcopy(res)
-        capacity = self.ReadCapacityRegistry()
-        if not self._ValidateReservation(reservation, capacity):
+        capacity = self.read_capacity_registry()
+        if not self._validate_reservation(reservation, capacity):
             self.logger.info("Reservation cannot be made.")
             return ""
-        remaining_capacity = self.RemainingCapacity(capacity)
+        remaining_capacity = self.remaining_capacity(capacity)
         can_be_reserved = True
         for req_res_type in reservation.keys():
             if req_res_type == "flavor":
@@ -227,10 +242,10 @@ class SwChCapacityRegistry:
             self.logger.info(f'Reservation ID generated: {reservation_uuid}')
             reservation['status'] = 'reserved'
             capacity["reservations"][reservation_uuid] = reservation
-            self.SaveCapacityRegistry(capacity)
+            self.save_capacity_registry(capacity)
             return reservation_uuid
 
-    def _ValidateReservation(self, reservation: dict, capacity: dict):
+    def _validate_reservation(self, reservation: dict, capacity: dict):
         if not isinstance(reservation, dict):
             self.logger.error('Reservation is not in a dictionary format.')
             return False
@@ -270,9 +285,9 @@ class SwChCapacityRegistry:
                         return False
         return True
       
-    def DoesReservationExist(self, reservation_id: str, capacity: dict = None):
+    def does_reservation_exist(self, reservation_id: str, capacity: dict = None):
         if capacity is None:
-            capacity = self.ReadCapacityRegistry()
+            capacity = self.read_capacity_registry()
         if not isinstance(reservation_id, str):
             self.logger.error(f'Given reservation ID is not a string.')
             return False
@@ -286,9 +301,9 @@ class SwChCapacityRegistry:
             self.logger.info(f'Reservation with ID "{reservation_id}" not found.')
             return False
 
-    def AcceptOfferedReservation(self, reservation_id: str):
-        capacity = self.ReadCapacityRegistry()
-        reservation_exists = self.DoesReservationExist(reservation_id, capacity)
+    def accept_offered_reservation(self, reservation_id: str):
+        capacity = self.read_capacity_registry()
+        reservation_exists = self.does_reservation_exist(reservation_id, capacity)
         if reservation_exists != True:
             return False
         else:
@@ -297,12 +312,12 @@ class SwChCapacityRegistry:
                 return False
             capacity["reservations"][reservation_id]["status"] = "assigned"
             self.logger.info(f'Reservation "{reservation_id}" found. Reservation accepted. Reservation status updated to "assigned".')
-            self.SaveCapacityRegistry(capacity)
+            self.save_capacity_registry(capacity)
             return True
     
-    def RejectOfferedReservation(self, reservation_id: str):
-        capacity = self.ReadCapacityRegistry()
-        reservation_exists = self.DoesReservationExist(reservation_id, capacity)
+    def reject_offered_reservation(self, reservation_id: str):
+        capacity = self.read_capacity_registry()
+        reservation_exists = self.does_reservation_exist(reservation_id, capacity)
         if reservation_exists != True:
             return False
         else:
@@ -311,12 +326,12 @@ class SwChCapacityRegistry:
                 return False
             del capacity["reservations"][reservation_id]
             self.logger.info(f'Reservation "{reservation_id}" found. Reservation rejected, reserved resources are freed.')
-            self.SaveCapacityRegistry(capacity)
+            self.save_capacity_registry(capacity)
             return True
 
-    def AppHasBeenDestroyed(self, reservation_id: str):
-        capacity = self.ReadCapacityRegistry()
-        reservation_exists = self.DoesReservationExist(reservation_id, capacity)
+    def app_has_been_destroyed(self, reservation_id: str):
+        capacity = self.read_capacity_registry()
+        reservation_exists = self.does_reservation_exist(reservation_id, capacity)
         if reservation_exists != True:
             return False
         else:
@@ -325,12 +340,12 @@ class SwChCapacityRegistry:
                 return False
             del capacity["reservations"][reservation_id]
             self.logger.info(f'Reservation "{reservation_id}" found. Reservation destroyed, reserved resources are freed.')
-            self.SaveCapacityRegistry(capacity)
+            self.save_capacity_registry(capacity)
             return True
 
-    def AllocateReservation(self, reservation_id: str):
-        capacity = self.ReadCapacityRegistry()
-        reservation_exists = self.DoesReservationExist(reservation_id, capacity)
+    def allocate_reservation(self, reservation_id: str):
+        capacity = self.read_capacity_registry()
+        reservation_exists = self.does_reservation_exist(reservation_id, capacity)
         if reservation_exists != True:
             return False
         else:
@@ -339,12 +354,12 @@ class SwChCapacityRegistry:
                 return False
             capacity["reservations"][reservation_id]["status"] = "allocated"
             self.logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "allocated".')
-            self.SaveCapacityRegistry(capacity)
+            self.save_capacity_registry(capacity)
             return True
 
-    def DeallocateReservation(self, reservation_id: str):
-        capacity = self.ReadCapacityRegistry()
-        reservation_exists = self.DoesReservationExist(reservation_id, capacity)
+    def deallocate_reservation(self, reservation_id: str):
+        capacity = self.read_capacity_registry()
+        reservation_exists = self.does_reservation_exist(reservation_id, capacity)
         if reservation_exists != True:
             return False
         else:
@@ -353,10 +368,10 @@ class SwChCapacityRegistry:
                 return False
             capacity["reservations"][reservation_id]["status"] = "assigned"
             self.logger.info(f'Reservation "{reservation_id}" found. Reservation status updated to "assigned".')
-            self.SaveCapacityRegistry(capacity)
+            self.save_capacity_registry(capacity)
             return True
 
-    def ReadCapacityRegistry(self):
+    def read_capacity_registry(self):
         capacity = {}
         with open("capreg.yaml", "r") as file:
             try:
@@ -367,7 +382,7 @@ class SwChCapacityRegistry:
         self.logger.info('Loaded capacity registry.')
         return capacity
 
-    def SaveCapacityRegistry(self, capacity: dict):
+    def save_capacity_registry(self, capacity: dict):
         with open("capreg.yaml", "w") as file:
             try:
                 file.write(yaml.dump(capacity))
@@ -377,13 +392,13 @@ class SwChCapacityRegistry:
                 self.logger.error("An error has occured!")
                 return False
 
-    def GetReservationInfo(self, reservation_id: str):
-        capacity = self.ReadCapacityRegistry()
-        reservation_exists = self.DoesReservationExist(reservation_id, capacity)
+    def get_reservation_info(self, reservation_id: str):
+        capacity = self.read_capacity_registry()
+        reservation_exists = self.does_reservation_exist(reservation_id, capacity)
         if reservation_exists != True:
             return {}
         else:
-            res_resources = self._SumReservationResources(reservation_id, capacity)
+            res_resources = self._sum_reservation_resources(reservation_id, capacity)
             reservation_info = {
                 'id': reservation_id,
                 'status': capacity["reservations"][reservation_id]['status'],
@@ -402,7 +417,7 @@ class SwChCapacityRegistry:
             print()
             return reservation_info
 
-    def _SumReservationResources(self, reservation_id: str, capacity: dict):
+    def _sum_reservation_resources(self, reservation_id: str, capacity: dict):
         total_reservations = {
             "flavor": {},
             "raw": {}
@@ -428,9 +443,9 @@ class SwChCapacityRegistry:
                             total_reservations["raw"][raw_res_type] += (amount * config_amount)
         return total_reservations
 
-    def GetCapacityRegistryInfo(self):
-        capacity = self.ReadCapacityRegistry()
-        total_reserved = self.SummarizeAllReservations(capacity)
+    def get_capacity_registry_info(self):
+        capacity = self.read_capacity_registry()
+        total_reserved = self.summarize_all_reservations(capacity)
         no_of_reservations = len(capacity["reservations"].keys())
         self.logger.info('Listing capacity registry information.')
         print(f"\r\n\tFlavor definitions:")

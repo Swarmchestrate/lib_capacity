@@ -35,61 +35,53 @@ def run_test():
     }
 
     # Initializing with a flavor and a raw resource dictionary
-    capreg.Initialize(flavor_definition=flavor_definition, capacity_by=capacity_by_raw)
-    capreg.GetCapacityRegistryInfo()
 
-    # Example reservation dictionary
+    capreg.initialize(flavor_definition=flavor_definition, capacity_by=capacity_by_raw)
+    capreg.get_capacity_registry_info()
     flavor_reservation = {
         "flavor": {
             "l1.large": 1,
             "m1.medium": 1
         }
     }
-
-    # Making a reservation. Initial reservation status is 'reserved'
-    reservation_id = capreg.GetReservationOffer(res=flavor_reservation)
-    capreg.GetReservationInfo(reservation_id)
-    capreg.GetCapacityRegistryInfo()
-
-    # Rejecting a reservation
-    capreg.RejectOfferedReservation(reservation_id)
-    capreg.GetCapacityRegistryInfo()
-
-    # Making a new reservation offer with the same requested flavours and amounts
-    reservation_id = capreg.GetReservationOffer(res=flavor_reservation)
-    capreg.GetCapacityRegistryInfo()
+    reservation_id = capreg.get_reservation_offer(res=flavor_reservation)
+    capreg.get_reservation_info(reservation_id)
+    capreg.get_capacity_registry_info()
+    capreg.reject_offered_reservation(reservation_id)
+    capreg.get_capacity_registry_info()
+    reservation_id = capreg.get_reservation_offer(res=flavor_reservation)
+    capreg.get_capacity_registry_info()
 
     # Accepting the offered reservation
-    capreg.AcceptOfferedReservation(reservation_id)
+    capreg.accept_offered_reservation(reservation_id)
 
     # Checking information about the reservation
-    capreg.GetReservationInfo(reservation_id)
+    capreg.get_reservation_info(reservation_id)
 
     # Checking information about the capacity registry
-    capreg.GetCapacityRegistryInfo()
+    capreg.get_capacity_registry_info()
 
     # Trying to make another reservation
     flavor_reservation_2 = { "flavor": {
         "m1.medium": 2,
         "s1.small": 1
     } }
-    reservation_id_2 = capreg.GetReservationOffer(res=flavor_reservation_2)
+    reservation_id_2 = capreg.get_reservation_offer(res=flavor_reservation_2)
 
     # Checking information about the reservation
-    capreg.GetReservationInfo(reservation_id_2)
+    capreg.get_reservation_info(reservation_id_2)
 
     # Accepting the offered reservation
-    capreg.AcceptOfferedReservation(reservation_id_2)
+    capreg.accept_offered_reservation(reservation_id_2)
 
     # Checking information about the capacity registry
-    capreg.GetCapacityRegistryInfo()
+    capreg.get_capacity_registry_info()
 
     # Free up resources after an app was destroyed
-    capreg.AppHasBeenDestroyed(reservation_id)
-    capreg.AppHasBeenDestroyed(reservation_id_2)
-
+    capreg.app_has_been_destroyed(reservation_id)
+    capreg.app_has_been_destroyed(reservation_id_2)
     # Checking information about the capacity registry
-    capreg.GetCapacityRegistryInfo()
+    capreg.get_capacity_registry_info()
 
 if __name__ == "__main__":
     # This example showcases when inputs are 

@@ -1,0 +1,26 @@
+
+[tool.poetry]
+name = "lib_capacity"
+version = "0.1.0"
+description = "A small library to manage capacity registries (flavors and raw resources)."
+authors = [
+    "Dr. József Kovács <jozsef.kovacs@sztaki.hu>",
+    "Bencee Ligetfalvi <ligetfalvi.bence@sztaki.hu>",
+]
+
+readme = "README.md"
+# package directory in this repository is `swch_capreg`
+packages = [{ include = "swch_capreg" }]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<4.0"
+PyYAML = "^6.0"
+Sardou = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+black = "^24.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
