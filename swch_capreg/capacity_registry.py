@@ -24,10 +24,9 @@ class SwChCapacityRegistry:
     def __init__(self):
         pass
 
-    def extract_capacity_definitions_from_tosca(self, capacity_description_filename: str):
+    def extract_capacity_definitions_from_CDT(self, capacity_description_filename: str):
         tosca = Sardou(capacity_description_filename)
-
-        return True
+        return tosca.get_capacities()
 
     def extract_application_requirements_from_SAT(self, application_description_filename: str):
         tosca = Sardou(application_description_filename)

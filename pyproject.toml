@@ -13,9 +13,9 @@ readme = "README.md"
 packages = [{ include = "swch_capreg" }]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<4.0"
+python = ">=3.12,<4.0"
 PyYAML = "^6.0"
-Sardou = "*"
+Sardou = "0.4.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
