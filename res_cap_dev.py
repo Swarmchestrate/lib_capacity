@@ -10,8 +10,8 @@ if __name__ == "__main__":
         app_req_dict = yaml.safe_load(f) or {}
 
     rescap = ResCap()
-    for key, data in app_req_dict.items():
-        print(f"==>{key}:")
-        variables = rescap.parse(data)
-        pprint.pprint(variables)
+    key, data = list(app_req_dict.items())[0]
+    print(f"==>{key}:")
+    variables = rescap.parse(data)
+    pprint.pprint(variables)
 
