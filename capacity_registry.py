@@ -66,11 +66,14 @@ class SwChCapacityRegistry:
             elif "capacity_raw" in init_capacity:
                 self.capacity["cloud"]["type"] = "init_raw"
                 #temporary workaround: convert raw capacity values to int if they are not already
-                init_raw = init_capacity.get("capacity_raw", None)
-                if init_raw:
-                    for key, value in init_raw.items():
+                init_raw_temp = init_capacity.get("capacity_raw", None)
+                init_raw = dict()
+                if init_raw_temp:
+                    for key, value in init_raw_temp.items():
                         if isinstance(value, str) and value.isdigit():
-                            init_raw[key] = int(value)
+                            init_raw["host." + key] = int(value)
+                        else:
+                            init_raw["host." + key] = value            
                 self.capacity["cloud"]["init_raw"] = init_raw
             else:
                 self.logger.info('Cloud flavour detected, but capacity is missing. Initialization was unsuccessful.')
@@ -91,6 +94,45 @@ class SwChCapacityRegistry:
             except Exception as e:
                 self.logger.debug(f"Error evaluating requirement expression for flavor '{flavor_name}': {e}")
         return matching_resources
+    
+    def get_available_instances_for_a_flavour(self, flavor_name: str, required_instance: int = 1):
+        if "cloud" not in self.capacity or "flavours" not in self.capacity["cloud"]:
+            return 0
+        if flavor_name not in self.capacity["cloud"]["flavours"]:
+            return 0
+        if self.capacity["cloud"]["type"] == "init_flavour":
+            available_amount = self.capacity["cloud"]["init_flavour"].get(flavor_name, 0)
+            available_instances = min(required_instance, available_amount)
+            self.logger.debug(f"Available amount of flavor '{flavor_name}': {available_amount}")
+            self.logger.debug(f"Required instances of flavor '{flavor_name}': {required_instance}")
+            self.logger.debug(f"Available instances of flavor '{flavor_name}': {available_instances}")
+            return available_instances
+        if self.capacity["cloud"]["type"] == "init_raw":
+            prop_names = ["host.num-cpus", "host.mem-size", "host.disk-size"]
+            available_props = dict((prop, value) for prop, value in self.capacity["cloud"]["init_raw"].items() if prop in prop_names)
+            self.logger.debug(f"Available raw resources for flavor: {flavor_name}")
+            self.logger.debug(f"\t\t{available_props}")
+            required_props_per_flavor = dict((prop, value) for prop, value in self.capacity["cloud"]["flavours"][flavor_name].items() if prop in prop_names)
+            self.logger.debug(f"Required raw resources per unit of flavor: {flavor_name}")
+            self.logger.debug(f"\t\t{required_props_per_flavor}")
+            self.logger.debug("Required instances of flavor: %d", required_instance)
+            counter, found = required_instance, False
+            while counter > 0 and not found:
+                found = True
+                for prop in prop_names:
+                    if available_props.get(prop, 0) < (required_props_per_flavor.get(prop, 0) * counter):
+                        counter -= 1
+                        found = False
+                        break
+            self.logger.debug(f"Available amount for flavor '{flavor_name}': {counter}")
+            return counter
+        
+    def generate_offer_for_requirements(self, swarmid: str, requirement_SAT: str):
+        matching_resources = self.get_matching_resources(requirement_SAT)
+        offer = {
+            "matching_flavors": matching_resources
+        }
+        return offer
     
     def dump_capacity_registry_info(self):
         #Dumping capacity registry information in a human-readable format
@@ -119,9 +161,9 @@ class SwChCapacityRegistry:
             self.logger.info(column_format.format("Capacity", "CPU", "RAM", "DISK"))
             self.logger.info(column_format.format(
                 "Max",
-                str(self.capacity["cloud"]["init_raw"]["num-cpus"]),
-                str(self.capacity["cloud"]["init_raw"]["mem-size"]),
-                str(self.capacity["cloud"]["init_raw"]["disk-size"])))
+                str(self.capacity["cloud"]["init_raw"]["host.num-cpus"]),
+                str(self.capacity["cloud"]["init_raw"]["host.mem-size"]),
+                str(self.capacity["cloud"]["init_raw"]["host.disk-size"])))
         """
         print(f"\r\n\tReservations:\t{no_of_reservations}")
         for id, value in capacity["reservations"].items():
