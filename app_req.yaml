@@ -1,0 +1,27 @@
+app1:
+  - host:
+      node_filter:
+        $and:
+          - $greater_equal:
+              - $get_property: [host, num-cpus]
+              - 2
+          - $greater:
+              - $get_property: [host, mem-size]
+              - 2
+          - $or:
+              - $equal:
+                  - $get_property: [locality, city]
+                  - london
+              - $equal:
+                  - $get_property: [locality, city]
+                  - paris
+          - $equal:
+                  - $get_property: [pricing, cost]
+                  - 0
+          - $equal:
+                  - $get_property: [os, distribution]
+                  - ubuntu
+
+# num-cpus >= 2 and mem-size > 2 and (city == london or city == paris) and pricing.cost == 0 and os.distribution == ubuntu
+
+

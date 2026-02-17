@@ -3,7 +3,7 @@ import yaml
 
 
 if __name__ == "__main__":
-    yaml_path = "app_req_test/test16.yaml"
+    yaml_path = "app_req.yaml"
     with open(yaml_path, 'r') as f:
         app_req_dict = yaml.safe_load(f) or {}
 
