@@ -4,10 +4,10 @@ app1:
         $and:
           - $or:
               - $equal:
-                  - $get_property: [host, city]
+                  - $get_property: [locality, city]
                   - paris
               - $equal:
-                  - $get_property: [host, city]
+                  - $get_property: [locality, city]
                   - london
           - $greater:
               - $get_property: [host, num-cpus]

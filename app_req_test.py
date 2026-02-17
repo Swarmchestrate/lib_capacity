@@ -4,16 +4,16 @@ from app_req import AppReq
 
 # Test dictionaries to use for all test cases
 TEST_DICTS = [
-    {'num-cpus': 2, 'mem-size': 2, 'city': 'paris'},
-    {'num-cpus': 2, 'mem-size': 4, 'city': 'london'},
-    {'num-cpus': 4, 'mem-size': 2, 'city': 'budapest'},
-    {'num-cpus': 4, 'mem-size': 4, 'city': 'paris'},
-    {'num-cpus': 2, 'mem-size': 2, 'city': 'budapest'},
-    {'num-cpus': 4, 'mem-size': 4, 'city': 'london'},
-    {'num-cpus': 2, 'mem-size': 4, 'city': 'budapest'},
-    {'num-cpus': 4, 'mem-size': 2, 'city': 'london'},
-    {'num-cpus': 2, 'mem-size': 2, 'city': 'london'},
-    {'num-cpus': 4, 'mem-size': 4, 'city': 'budapest'},
+    {'host.num-cpus': 2, 'host.mem-size': 2, 'locality.city': 'paris'},
+    {'host.num-cpus': 2, 'host.mem-size': 4, 'locality.city': 'london'},
+    {'host.num-cpus': 4, 'host.mem-size': 2, 'locality.city': 'budapest'},
+    {'host.num-cpus': 4, 'host.mem-size': 4, 'locality.city': 'paris'},
+    {'host.num-cpus': 2, 'host.mem-size': 2, 'locality.city': 'budapest'},
+    {'host.num-cpus': 4, 'host.mem-size': 4, 'locality.city': 'london'},
+    {'host.num-cpus': 2, 'host.mem-size': 4, 'locality.city': 'budapest'},
+    {'host.num-cpus': 4, 'host.mem-size': 2, 'locality.city': 'london'},
+    {'host.num-cpus': 2, 'host.mem-size': 2, 'locality.city': 'london'},
+    {'host.num-cpus': 4, 'host.mem-size': 4, 'locality.city': 'budapest'},
 ]
 
 # Hardwired expected results for each test file and dict order

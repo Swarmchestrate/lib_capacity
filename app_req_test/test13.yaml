@@ -10,6 +10,6 @@ app1:
                   - $get_property: [host, mem-size]
                   - 2
           - $equal:
-              - $get_property: [host, city]
+              - $get_property: [locality, city]
               - paris
         # (num-cpus == 4 and mem-size >= 2) and city == paris
