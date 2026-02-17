@@ -1,0 +1,7 @@
+app1:
+  - host:
+      node_filter:
+        $smaller_equal:
+          - $get_property: [host, mem-size]
+          - 2
+        # mem-size <= 2

@@ -1,0 +1,19 @@
+app1:
+  - host:
+      node_filter:
+        $or:
+          - $and:
+              - $equal:
+                  - $get_property: [host, num-cpus]
+                  - 2
+              - $equal:
+                  - $get_property: [host, city]
+                  - budapest
+          - $and:
+              - $equal:
+                  - $get_property: [host, num-cpus]
+                  - 4
+              - $equal:
+                  - $get_property: [host, city]
+                  - london
+        # (num-cpus == 2 and city == budapest) or (num-cpus == 4 and city == london)

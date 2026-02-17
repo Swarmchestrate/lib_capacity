@@ -1,0 +1,15 @@
+app1:
+  - host:
+      node_filter:
+        $or:
+          - $and:
+              - $equal:
+                  - $get_property: [host, mem-size]
+                  - 4
+              - $equal:
+                  - $get_property: [host, city]
+                  - budapest
+          - $smaller_equal:
+              - $get_property: [host, num-cpus]
+              - 2
+        # (mem-size == 4 and city == budapest) or num-cpus <= 2

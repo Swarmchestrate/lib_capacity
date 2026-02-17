@@ -1,0 +1,19 @@
+app1:
+  - host:
+      node_filter:
+        $and:
+          - $or:
+              - $equal:
+                  - $get_property: [host, num-cpus]
+                  - 2
+              - $equal:
+                  - $get_property: [host, num-cpus]
+                  - 4
+          - $or:
+              - $equal:
+                  - $get_property: [host, mem-size]
+                  - 2
+              - $equal:
+                  - $get_property: [host, mem-size]
+                  - 4
+        # (num-cpus == 2 or num-cpus == 4) and (mem-size == 2 or mem-size == 4)

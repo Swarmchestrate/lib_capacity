@@ -1,0 +1,15 @@
+app1:
+  - host:
+      node_filter:
+        $and:
+          - $and:
+              - $equal:
+                  - $get_property: [host, num-cpus]
+                  - 4
+              - $greater_equal:
+                  - $get_property: [host, mem-size]
+                  - 2
+          - $equal:
+              - $get_property: [host, city]
+              - paris
+        # (num-cpus == 4 and mem-size >= 2) and city == paris

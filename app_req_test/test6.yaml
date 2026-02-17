@@ -1,0 +1,7 @@
+app1:
+  - host:
+      node_filter:
+        $greater_equal:
+          - $get_property: [host, num-cpus]
+          - 4
+        # num-cpus >= 4

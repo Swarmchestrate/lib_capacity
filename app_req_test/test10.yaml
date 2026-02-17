@@ -1,0 +1,11 @@
+app1:
+  - host:
+      node_filter:
+        $and:
+          - $greater:
+              - $get_property: [host, num-cpus]
+              - 2
+          - $smaller:
+              - $get_property: [host, mem-size]
+              - 4
+        # num-cpus > 2 and mem-size < 4

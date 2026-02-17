@@ -1,0 +1,11 @@
+app1:
+  - host:
+      node_filter:
+        $or:
+          - $equal:
+              - $get_property: [host, num-cpus]
+              - 4
+          - $equal:
+              - $get_property: [host, city]
+              - budapest
+        # num-cpus == 4 or city == budapest
