@@ -43,7 +43,7 @@ class AppReq:
                         var = prop_key(prop_path)
                         val = eq[1]
                         if isinstance(val, str):
-                            val_str = repr(val)
+                            val_str = repr(val.lower())
                         else:
                             val_str = str(val)
                         return f"(vals[{repr(var)}] == {val_str})"

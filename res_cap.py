@@ -17,7 +17,7 @@ class ResCap:
                 for k, v in d.items():
                     extract_flat(v, prefix + [k])
             else:
-                result[".".join(prefix)] = d
+                result[".".join(prefix)] = d.lower() if isinstance(d, str) else d
 
         extract_flat(data)
         return result
