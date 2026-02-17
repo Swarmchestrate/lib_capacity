@@ -1,0 +1,102 @@
+m2-medium-sztaki:
+  energy:
+    consumption: 0.1
+    energy-type: non-green
+    powered-type: mains-powered
+  host:
+    bandwidth: '1000'
+    disk-size: '20'
+    mem-size: 8 GB
+    num-cpus: 4
+  locality:
+    city: Budapest
+    continent: Europe
+    country: Hungary
+  network:
+    ipv4_enabled: false
+    ipv6_enabled: false
+    type: ethernet
+  os:
+    distribution: ubuntu
+    type: linux
+    version: '22.04'
+  pricing:
+    cost: 0
+  resource:
+    capacity-provider: SZTAKI
+    provider: SZTAKI
+    type: cloud
+  trust:
+    level: 0.5
+m2-small-sztaki:
+  energy:
+    consumption: 0.1
+    energy-type: non-green
+    powered-type: mains-powered
+  host:
+    bandwidth: '1000'
+    disk-size: '20'
+    mem-size: 4 GB
+    num-cpus: 2
+  locality:
+    city: Budapest
+    continent: Europe
+    country: Hungary
+  network:
+    ipv4_enabled: false
+    ipv6_enabled: false
+    type: ethernet
+  os:
+    distribution: ubuntu
+    type: linux
+    version: '22.04'
+  pricing:
+    cost: 0
+  resource:
+    capacity-provider: SZTAKI
+    provider: SZTAKI
+    type: cloud
+  trust:
+    level: 0.5
+specific-small-sztaki:
+  energy:
+    consumption: 0.1
+    energy-type: non-green
+    powered-type: mains-powered
+  host:
+    bandwidth: '1000'
+    disk-size: '20'
+    mem-size: 4 GB
+    num-cpus: 2
+  locality:
+    city: Budapest
+    continent: Europe
+    country: Hungary
+  network:
+    ipv4_enabled: false
+    ipv6_enabled: false
+    type: ethernet
+  os:
+    distribution: ubuntu
+    type: linux
+    version: '22.04'
+  pricing:
+    cost: 0
+  resource:
+    capacity-provider: SZTAKI
+    labels:
+      $map:
+      - $key:
+          $primitive: key_name
+        $primitive: my_specific_resource
+      $meta:
+        description: Labels associated with the resource
+        key:
+          type: string
+        type: map
+        value:
+          type: string
+    provider: SZTAKI
+    type: cloud
+  trust:
+    level: 0.5
