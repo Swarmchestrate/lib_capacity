@@ -4,15 +4,16 @@ import logging
 import uuid
 import yaml
 from sardou import Sardou
-
-
+import app_req
+from res_cap import ResCap
+from app_req import AppReq
 
 class SwChCapacityRegistry:
 
     # Logger configuration
     logger = logging.getLogger()
     logging.basicConfig(
-        level=logging.INFO, 
+        level=logging.DEBUG, 
         format='(%(asctime)s) %(levelname)s:\t%(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
@@ -20,6 +21,7 @@ class SwChCapacityRegistry:
     # May expand in the future
     RESOURCE_TYPES_RAW    = ["cpu", "ram", "disk", "pub_ip"]
     RESOURCE_TYPES_FLAVOR = ["cpu", "ram", "disk"] 
+    capacity: dict = {}
 
     def __init__(self):
         pass
@@ -35,61 +37,129 @@ class SwChCapacityRegistry:
         for node_name, node in nodes.items():
             if 'requirements' in node:
                 requirements[node_name] = node['requirements']
-        return requirements
+        
+        app_req = AppReq()
+        requirements_logic = app_req.parse(requirements)
+        self.logger.debug("Requirement expression:")
+        self.logger.debug("  %s", requirements_logic)
+    
+        return requirements_logic
 
-    def initialize(self, flavor_definition: dict, capacity_by: dict = None):
-        """Initializes a capacity registry file with the given flavor definitions and
-        either per-flavor amounts or raw totals.
+    def initialize_capacity_from_file(self, filename: str):
+        tosca_capacity = self.extract_capacity_definitions_from_CDT(filename)
+        self.logger.debug("Capacity read from file:\n %s", yaml.dump(tosca_capacity, default_flow_style=False))
+        self.initialize(init_capacity=tosca_capacity)
+        return
+
+    def initialize(self, init_capacity: dict):
+        """Initializes a capacity
         """
-        if self.validate_flavor_definition(flavor_definition) == False:
-            self.logger.info('Invalid input flavor definition. Initialization was unsuccessful.')
-            return False
-        if (flavor_definition is None):
-            self.logger.error("No flavor types are defined. Please define the initial flavors!")
-            return False
-        if (capacity_by is None):
-            self.logger.error("No capacity is defined. Please define the initial capacities!")
-            return False
-        capacity_type_raw = False
-        if not isinstance(flavor_definition, dict):
-            self.logger.error('Parameter flavor_definition is not a dict.')
-            return False
-        if not isinstance(capacity_by, dict):
-            self.logger.error('Parameter capacity_by is not a dict.')
-            return False
-        if not capacity_by:
-            self.logger.error("No capacity is defined. Please define the initial capacities!")
-            return False
-        keys = set(capacity_by.keys())
-        if keys and all(k in self.RESOURCE_TYPES_RAW for k in keys):
-            capacity_type_raw = True
-        elif keys and all(k in flavor_definition.keys() for k in keys):
-            capacity_type_raw = False
-        else:
-            self.logger.error('Second parameter must be either a raw resource totals dict or a per-flavor amounts dict.')
-            return False
-        if self.validate_capacity(capacity_by, flavor_definition, capacity_type_raw) == False:
-            self.logger.info('Invalid capacity definition. Initialization was unsuccessful.')
-            return False
-        self.logger.info('Initializing capacity registry...')
-        capacity = {
-            "initial": {},
-            "reservations": {}
-        }
-        capacity["initial"]["raw"] = capacity_by if capacity_type_raw else None
-        capacity["initial"]["flavor"] = flavor_definition
-        capacity["initial"]["flavor_amounts"] = capacity_by if not capacity_type_raw else None
-        self.logger.info("Saving capacity into file...")
-        self.logger.info(f'Capacity info:\n"{capacity}"\n')
-        with open("capreg.yaml", "w") as file:
-            try:
-                file.write(yaml.dump(capacity))
-            except yaml.YAMLError as exception:
-                print(exception)
-                self.logger.error("An error has occured!")
+        if "flavour" in init_capacity:
+            self.capacity["cloud"] = dict()
+            self.capacity["cloud"]["flavours"] = dict()
+            rescap = ResCap()
+            for act_flavor, act_flavor_data in init_capacity["flavour"].items():
+                self.capacity["cloud"]["flavours"][act_flavor] = rescap.parse(act_flavor_data)
+            if "capacity_flavour" in init_capacity:
+                self.capacity["cloud"]["type"] = "init_flavour"
+                self.capacity["cloud"]["init_flavour"] = init_capacity.get("capacity_flavour", None)
+            elif "capacity_raw" in init_capacity:
+                self.capacity["cloud"]["type"] = "init_raw"
+                #temporary workaround: convert raw capacity values to int if they are not already
+                init_raw = init_capacity.get("capacity_raw", None)
+                if init_raw:
+                    for key, value in init_raw.items():
+                        if isinstance(value, str) and value.isdigit():
+                            init_raw[key] = int(value)
+                self.capacity["cloud"]["init_raw"] = init_raw
+            else:
+                self.logger.info('Cloud flavour detected, but capacity is missing. Initialization was unsuccessful.')
                 return False
-        self.logger.info('Successfully initialized capacity registry!')
+            self.logger.debug("Initialized capacity:\n %s", yaml.dump(self.capacity, default_flow_style=False))
         return True
+
+    def get_matching_resources(self, requirement_SAT: str):
+        matching_resources = []
+        app_req = AppReq()
+        self.logger.debug("Evaluating requirement expressions against cloud flavors:")
+        for flavor_name, flavor_data in self.capacity["cloud"]["flavours"].items():
+            try:
+                result = app_req.eval_app_req_with_vars(requirement_SAT, [flavor_data])
+                self.logger.debug(f"  {flavor_name} : {result[0]}")
+                if result[0] == True:
+                    matching_resources.append(flavor_name)
+            except Exception as e:
+                self.logger.debug(f"Error evaluating requirement expression for flavor '{flavor_name}': {e}")
+        return matching_resources
+    
+    def dump_capacity_registry_info(self):
+        #Dumping capacity registry information in a human-readable format
+        self.logger.info('Dumping capacity registry information:')
+        self.logger.info('Cloud:')
+        #Dumping flavor definitions
+        column_format = "\t{:25.25s}{:>10s}{:>10s}{:>10s}"
+        self.logger.info(column_format.format("Flavours","CPU","RAM","DISK"))
+        for act_flavor_type, act_flavor_data in self.capacity["cloud"]["flavours"].items():
+            self.logger.info(column_format.format(
+                act_flavor_type.upper(),
+                str(act_flavor_data["host.num-cpus"]),
+                str(act_flavor_data["host.mem-size"]),
+                str(act_flavor_data["host.disk-size"])))
+        #Dumping initial capacity by flavour        
+        if self.capacity["cloud"]["type"] == "init_flavour":
+            self.logger.info('')
+            column_format = "\t{:25.25s}{:>10s}"
+            self.logger.info(column_format.format("Capacity", "Max"))
+            for act_flavor_type, act_flavor_amount in self.capacity["cloud"]["init_flavour"].items():
+                self.logger.info(column_format.format(act_flavor_type.upper(), str(act_flavor_amount)))
+        #Dumping initial capacity by raw
+        if self.capacity["cloud"]["type"] == "init_raw":
+            self.logger.info('')
+            column_format = "\t{:25.25s}{:>10s}{:>10s}{:>10s}"
+            self.logger.info(column_format.format("Capacity", "CPU", "RAM", "DISK"))
+            self.logger.info(column_format.format(
+                "Max",
+                str(self.capacity["cloud"]["init_raw"]["num-cpus"]),
+                str(self.capacity["cloud"]["init_raw"]["mem-size"]),
+                str(self.capacity["cloud"]["init_raw"]["disk-size"])))
+        """
+        print(f"\r\n\tReservations:\t{no_of_reservations}")
+        for id, value in capacity["reservations"].items():
+            print(f'\t{id.upper()}')
+            print(f'\t\t{value["status"]}')
+            print(f'\t\t', end='')
+            for key, value2 in value["flavor"].items():
+                print(f'{key.upper()}: {value2}', end=' ')
+            print()
+        if (capacity["initial"]["raw"] is not None):
+            print("\r\n\tCapacity by raw:")
+            print("\tType\t\tAll\tReserv.\tFree\t(% free)")
+            for act_resource_type, act_resource_amount in capacity["initial"]["raw"].items():
+                try:
+                    percentage = '{:.1%}'.format(1 - (total_reserved["raw"][act_resource_type] / act_resource_amount))
+                    free = act_resource_amount - total_reserved["raw"][act_resource_type]
+                    print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}\t{free}\t{percentage}')
+                except KeyError:
+                    print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t0\t0')
+        else:
+            print("\r\n\tCapacity by flavors:")
+            print("\tFlavor\t\tAll\tReserv.\tFree\t(% free)")
+            for act_flavor_type, act_flavor_data in capacity["initial"]["flavor"].items():
+                percentage = 0
+                free = 0
+                cap_amount = capacity['initial'].get('flavor_amounts', {}).get(act_flavor_type, None)
+                try:
+                    percentage = '{:.1%}'.format(1 - (total_reserved["flavor"][act_flavor_type] / cap_amount))
+                    free = cap_amount - total_reserved["flavor"][act_flavor_type]
+                    print(f'\t{act_flavor_type.upper()}\t{cap_amount}\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
+                except KeyError:
+                    percentage = "n/a"
+                    free = "n/a"
+                    print(f'\t{act_flavor_type.upper()}\tn/a\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
+        print()
+        """
+        #print("Capacity registry information: \n", yaml.dump(self.capacity, default_flow_style=False))
+
 
     def validate_flavor_definition(self, flavor_definition: dict):
         for a_flavor in flavor_definition.keys():
@@ -206,44 +276,90 @@ class SwChCapacityRegistry:
 
     def get_reservation_offer(self, res: dict):
         reservation = copy.deepcopy(res)
-        capacity = self.read_capacity_registry()
-        if not self._validate_reservation(reservation, capacity):
-            self.logger.info("Reservation cannot be made.")
-            return ""
-        remaining_capacity = self.remaining_capacity(capacity)
-        can_be_reserved = True
-        for req_res_type in reservation.keys():
-            if req_res_type == "flavor":
-                capacity_type_raw = False if capacity["initial"]["raw"] == None else True
-                if capacity_type_raw:
-                    for req_flavor in reservation["flavor"].keys():
-                        flavor_config = copy.deepcopy(capacity["initial"]["flavor"][req_flavor])
-                        for res_type, res_amount in flavor_config.items():
-                            req_res_amount = res_amount * reservation["flavor"][req_flavor]
-                            if req_res_amount > remaining_capacity["raw"][res_type]:
-                                self.logger.warning(f'Not enough remaining "{res_type}" resources.')
-                                can_be_reserved = False
-                                break
-                        if not can_be_reserved:
-                            break
-                else:
-                    for req_flavor in reservation["flavor"].keys():
-                        if reservation["flavor"][req_flavor] > remaining_capacity["flavor"][req_flavor]:
-                            self.logger.warning(f'Not enough remaining "{req_flavor}" flavor.')
-                            can_be_reserved = False
-                            break
-        if not can_be_reserved:
-            self.logger.info("Reservation cannot be made.")
-            return ""
-        else:
-            self.logger.info('Enough remaining resources. Registering reservation.')
-            reservation_uuid = str(uuid.uuid4())
-            self.logger.info(f'Reservation ID generated: {reservation_uuid}')
-            reservation['status'] = 'reserved'
-            capacity["reservations"][reservation_uuid] = reservation
-            self.save_capacity_registry(capacity)
-            return reservation_uuid
+        # Basic validation of input
+        if not isinstance(reservation, dict):
+            self.logger.error('Reservation must be a dict.')
+            return {}
+        if 'flavor' not in reservation or not isinstance(reservation['flavor'], dict) or reservation['flavor'] == {}:
+            self.logger.error('Reservation must contain a non-empty "flavor" dictionary.')
+            return {}
 
+        # Ensure capacity is initialized
+        if not isinstance(self.capacity, dict) or 'cloud' not in self.capacity:
+            self.logger.error('No in-memory capacity available for matchmaking.')
+            return {}
+
+        cloud = self.capacity.get('cloud', {})
+        flavours_def = cloud.get('flavours')
+        if flavours_def is None:
+            self.logger.error('No flavor definitions available in capacity.')
+            return {}
+
+        cap_type = cloud.get('type')
+
+        # Compute available counts per flavor depending on capacity type
+        available_by_flavor = {}
+        if cap_type == 'init_flavour':
+            init_flavour = cloud.get('init_flavour', {}) or {}
+            for f, amt in init_flavour.items():
+                available_by_flavor[f] = int(amt)
+        elif cap_type == 'init_raw':
+            # determine how many of each flavor can be satisfied from raw totals
+            init_raw = cloud.get('init_raw', {}) or {}
+            for f, spec in flavours_def.items():
+                # spec maps raw resource -> units per flavor
+                max_per_resource = []
+                for raw_res, per_unit in spec.items():
+                    if per_unit <= 0:
+                        max_per_resource.append(0)
+                        continue
+                    available_amount = init_raw.get(raw_res, 0)
+                    max_per_resource.append(available_amount // per_unit)
+                available_by_flavor[f] = min(max_per_resource) if max_per_resource else 0
+        else:
+            self.logger.error('Unknown capacity type for matchmaking.')
+            return {}
+
+        # Validate requested flavors against definitions and availability
+        requested = reservation['flavor']
+        for f, req_amt in requested.items():
+            if f not in flavours_def:
+                self.logger.error(f'Requested flavor "{f}" is not defined in cloud flavors.')
+                return {}
+            if not isinstance(req_amt, int) or isinstance(req_amt, bool) or req_amt <= 0:
+                self.logger.error(f'Requested amount for flavor "{f}" must be a positive integer.')
+                return {}
+            avail = available_by_flavor.get(f, 0)
+            if req_amt > avail:
+                self.logger.info(f'Insufficient capacity for flavor "{f}": requested {req_amt}, available {avail}.')
+                return {}
+
+        # Compute raw requirements for the offered reservation
+        raw_requirements = {}
+        for f, req_amt in requested.items():
+            spec = flavours_def[f]
+            for raw_res, per_unit in spec.items():
+                raw_requirements[raw_res] = raw_requirements.get(raw_res, 0) + (per_unit * req_amt)
+
+        # Create reservation entry (in-memory) and return offer
+        if 'reservations' not in self.capacity:
+            self.capacity['reservations'] = {}
+        reservation_id = str(uuid.uuid4())
+        self.capacity['reservations'][reservation_id] = {
+            'status': 'reserved',
+            'flavor': requested,
+            'raw': raw_requirements
+        }
+
+        offer = {
+            'id': reservation_id,
+            'status': 'reserved',
+            'flavor': requested,
+            'raw': raw_requirements
+        }
+        self.logger.info(f'Reservation offer created with id {reservation_id}.')
+        return offer
+        
     def _validate_reservation(self, reservation: dict, capacity: dict):
         if not isinstance(reservation, dict):
             self.logger.error('Reservation is not in a dictionary format.')
@@ -442,50 +558,3 @@ class SwChCapacityRegistry:
                             total_reservations["raw"][raw_res_type] += (amount * config_amount)
         return total_reservations
 
-    def get_capacity_registry_info(self):
-        capacity = self.read_capacity_registry()
-        total_reserved = self.summarize_all_reservations(capacity)
-        no_of_reservations = len(capacity["reservations"].keys())
-        self.logger.info('Listing capacity registry information.')
-        print(f"\r\n\tFlavor definitions:")
-        print("\tFlavor\t\tCPU\tDISK\tRAM\tPUB_IP")
-        for act_flavor_type, act_flavor_data in capacity["initial"]["flavor"].items():
-            print(f'\t{act_flavor_type.upper()}', end='')
-            print(f'\t{act_flavor_data["cpu"]}', end='')
-            print(f'\t{act_flavor_data["disk"]}', end='')
-            print(f'\t{act_flavor_data["ram"]}', end='')
-            print(f'\t{act_flavor_data["pub_ip"] if "pub_ip" in act_flavor_data else ""}')
-        print(f"\r\n\tReservations:\t{no_of_reservations}")
-        for id, value in capacity["reservations"].items():
-            print(f'\t{id.upper()}')
-            print(f'\t\t{value["status"]}')
-            print(f'\t\t', end='')
-            for key, value2 in value["flavor"].items():
-                print(f'{key.upper()}: {value2}', end=' ')
-            print()
-        if (capacity["initial"]["raw"] is not None):
-            print("\r\n\tCapacity by raw:")
-            print("\tType\t\tAll\tReserv.\tFree\t(% free)")
-            for act_resource_type, act_resource_amount in capacity["initial"]["raw"].items():
-                try:
-                    percentage = '{:.1%}'.format(1 - (total_reserved["raw"][act_resource_type] / act_resource_amount))
-                    free = act_resource_amount - total_reserved["raw"][act_resource_type]
-                    print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t{total_reserved["raw"][act_resource_type]}\t{free}\t{percentage}')
-                except KeyError:
-                    print(f'\t{act_resource_type.upper()}\t\t{act_resource_amount}\t0\t0')
-        else:
-            print("\r\n\tCapacity by flavors:")
-            print("\tFlavor\t\tAll\tReserv.\tFree\t(% free)")
-            for act_flavor_type, act_flavor_data in capacity["initial"]["flavor"].items():
-                percentage = 0
-                free = 0
-                cap_amount = capacity['initial'].get('flavor_amounts', {}).get(act_flavor_type, None)
-                try:
-                    percentage = '{:.1%}'.format(1 - (total_reserved["flavor"][act_flavor_type] / cap_amount))
-                    free = cap_amount - total_reserved["flavor"][act_flavor_type]
-                    print(f'\t{act_flavor_type.upper()}\t{cap_amount}\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
-                except KeyError:
-                    percentage = "n/a"
-                    free = "n/a"
-                    print(f'\t{act_flavor_type.upper()}\tn/a\t{total_reserved["flavor"][act_flavor_type]}\t{free}\t{percentage}')
-        print()

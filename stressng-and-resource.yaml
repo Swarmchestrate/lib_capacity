@@ -1,0 +1,67 @@
+tosca_definitions_version: tosca_2_0
+
+description: stressng on Swarmchestrate
+
+imports:
+- namespace: swch
+  url: https://raw.githubusercontent.com/Swarmchestrate/tosca/refs/heads/main/profiles/eu.swarmchestrate/profile.yaml
+  #url: file:///workspaces/tosca/profiles/eu.swarmchestrate/profile.yaml
+
+service_template:
+
+  node_templates:
+
+    swarm:
+      type: swch:Swarm
+      directives:
+      - substitute
+    
+    stressng:
+      type: swch:Microservice
+      properties:
+        image: lorel/docker-stress-ng
+        args: ['--cpu', '0', '--cpu-method', 'pi', '-l', '20']
+        ports:
+        - port: 80
+          targetPort: 80
+          nodePort: 30080
+        - port: 443
+          targetPort: 443
+          nodePort: 30443
+      requirements:
+      - host:       
+          node_filter:
+            $and:
+              - $greater_equal:
+                  - $get_property: [ SELF, TARGET, CAPABILITY, host, mem-size ]
+                  - 2
+              - $equal:
+                  - $get_property: [ SELF, TARGET, CAPABILITY, host, num-cpus ]
+                  - 4
+              - $equal:
+                  - $get_property: [ SELF, TARGET, CAPABILITY, locality, city ]
+                  - Budapest
+  policies:
+    - energy:
+        type: swch:QoS.Energy.Budget
+        properties:
+          priority: 0.5  # Between 0 and 1, where 1 is the highest priority
+          target: 40      # watts per hour
+
+    - cost:
+        type: swch:QoS.Cost.Budget
+        properties:
+          priority: 0.5  # Between 0 and 1, where 1 is the highest priority
+          target: 2       # $ per hour
+
+    - bandwidth:
+        type: swch:QoS.Performance.Bandwidth
+        properties:
+          priority: 0.5  # Between 0 and 1, where 1 is the highest priority
+          target: 800     # Mbps
+
+    - latency:
+        type: swch:QoS.Performance.Latency
+        properties:
+          priority: 0.5  # Between 0 and 1, where 1 is the highest priority
+          target: 70     # time (ms)

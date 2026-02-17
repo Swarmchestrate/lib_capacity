@@ -17,7 +17,13 @@ class ResCap:
                 for k, v in d.items():
                     extract_flat(v, prefix + [k])
             else:
-                result[".".join(prefix)] = d.lower() if isinstance(d, str) else d
+                key = ".".join(prefix)
+                #temporary workaround: convert integers to string
+                if key.endswith('.mem-size') or key.endswith('.disk-size'):
+                    value = int(d)
+                else:
+                    value = d.lower() if isinstance(d, str) else d
+                result[key] = value
 
         extract_flat(data)
         return result
