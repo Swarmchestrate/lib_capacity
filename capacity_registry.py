@@ -88,9 +88,12 @@ class SwChCapacityRegistry:
             self.capacity["cloud"][self.capacity["cloud"]["type"]]["free"] = \
                 self.capacity["cloud"][self.capacity["cloud"]["type"]]["init"].copy()
             if self.capacity["cloud"]["type"] == "flavour":
-                self.capacity["cloud"][self.capacity["cloud"]["type"]]["reserved"] = dict()
-                self.capacity["cloud"][self.capacity["cloud"]["type"]]["assigned"] = dict()
-                self.capacity["cloud"][self.capacity["cloud"]["type"]]["allocated"] = dict()            
+                init_dict = self.capacity["cloud"][self.capacity["cloud"]["type"]]["init"].copy()
+                for flavors in init_dict.keys():
+                    init_dict[flavors] = 0
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["reserved"] = init_dict.copy()
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["assigned"] = init_dict.copy()
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["allocated"] = init_dict.copy() 
             if self.capacity["cloud"]["type"] == "raw":
                 init_dict={}
                 for prop in self.calc_res_props:
@@ -126,9 +129,9 @@ class SwChCapacityRegistry:
         if self.capacity["cloud"]["type"] == "flavour":
             available_amount = self.capacity["cloud"]["flavour"]["free"].get(flavor_name, 0)
             available_instances = min(required_instance, available_amount)
-            self.logger.debug(f"Available amount of flavor '{flavor_name}': {available_amount}")
-            self.logger.debug(f"Required instances of flavor '{flavor_name}': {required_instance}")
-            self.logger.debug(f"Available instances of flavor '{flavor_name}': {available_instances}")
+            self.logger.debug(f"\tFree amount of flavor '{flavor_name}': {available_amount}")
+            self.logger.debug(f"\tRequired instances of flavor '{flavor_name}': {required_instance}")
+            self.logger.debug(f"\tAvailable instances of flavor '{flavor_name}': {available_instances}")
             return available_instances
         if self.capacity["cloud"]["type"] == "raw":
             available_props = dict((prop, value) for prop, value in self.capacity["cloud"]["raw"]["free"].items() if prop in self.calc_res_props)

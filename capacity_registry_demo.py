@@ -4,12 +4,11 @@ import pprint
 
 if __name__ == "__main__":
     capreg = SwChCapacityRegistry()
-    #capreg.initialize_capacity_from_file("sztaki-capacity-flavor.yaml")
     capreg.initialize_capacity_from_file("sztaki-capacity-raw.yaml")
+    #capreg.initialize_capacity_from_file("sztaki-capacity-flavor.yaml")
     capreg.dump_capacity_registry_info()
 
     requirements = capreg.extract_application_requirements_from_SAT("BookInfo-simple.yaml")
-
     matching_resources = capreg.calculate_matching_resources(requirements)
  
     for node, matching_flavors in matching_resources.items():

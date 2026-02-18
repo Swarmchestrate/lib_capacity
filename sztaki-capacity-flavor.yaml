@@ -119,6 +119,24 @@ service_template:
 
   node_templates:
 
+    m2-small-sztaki:
+      type: OpenStackBase
+      properties:
+        flavor_name: m2.small
+        key_name: fuelics
+      capabilities:
+        capacity:
+          properties:
+            instances: 8
+        host:
+          properties:
+            num-cpus: 1
+            mem-size: 1
+            disk-size: 10
+        energy:
+          properties:
+            consumption: 0.10
+
     m2-medium-sztaki:
       type: OpenStackBase
       properties:
@@ -127,42 +145,30 @@ service_template:
       capabilities:
         capacity:
           properties:
-            instances: 4
-        host:
-          properties:
-            num-cpus: 4
-            mem-size: 8
-        energy:
-          properties:
-            consumption: 0.10
-
-    m2-small-sztaki:
-      type: OpenStackBase
-      properties:
-        flavor_name: m2.small
-        key_name: fuelics
-      capabilities:
+            instances: 8
         host:
           properties:
             num-cpus: 2
-            mem-size: 4
+            mem-size: 2
+            disk-size: 20
         energy:
           properties:
             consumption: 0.10
   
-    specific-small-sztaki:
+    m2.large-sztaki:
       type: OpenStackBase
       properties:
-        flavor_name: m2.small
+        flavor_name: m2.large
         key_name: fuelics
       capabilities:
         capacity:
           properties:
-            instances: 1
+            instances: 8
         host:
           properties:
-            num-cpus: 2
+            num-cpus: 4
             mem-size: 4
+            disk-size: 40
         resource:
           properties:
             labels:
