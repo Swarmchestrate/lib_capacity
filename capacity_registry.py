@@ -18,10 +18,13 @@ class SwChCapacityRegistry:
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    # May expand in the future
+    #Name of properties to be used in calculations
+    calc_res_props = ["host.num-cpus", "host.mem-size", "host.disk-size"]
+    calc_res_props_labels = ["CPU", "RAM", "DISK"]
+    capacity: dict = {}
+
     RESOURCE_TYPES_RAW    = ["cpu", "ram", "disk", "pub_ip"]
     RESOURCE_TYPES_FLAVOR = ["cpu", "ram", "disk"] 
-    capacity: dict = {}
 
     def __init__(self):
         pass
@@ -61,10 +64,11 @@ class SwChCapacityRegistry:
             for act_flavor, act_flavor_data in init_capacity["flavour"].items():
                 self.capacity["cloud"]["flavours"][act_flavor] = rescap.parse(act_flavor_data)
             if "capacity_flavour" in init_capacity:
-                self.capacity["cloud"]["type"] = "init_flavour"
-                self.capacity["cloud"]["init_flavour"] = init_capacity.get("capacity_flavour", None)
+                self.capacity["cloud"]["type"] = "flavour"
+                self.capacity["cloud"]["flavour"] = dict()
+                self.capacity["cloud"]["flavour"]["init"] = init_capacity.get("capacity_flavour", dict())
             elif "capacity_raw" in init_capacity:
-                self.capacity["cloud"]["type"] = "init_raw"
+                self.capacity["cloud"]["type"] = "raw"
                 #temporary workaround: convert raw capacity values to int if they are not already
                 init_raw_temp = init_capacity.get("capacity_raw", None)
                 init_raw = dict()
@@ -74,10 +78,24 @@ class SwChCapacityRegistry:
                             init_raw["host." + key] = int(value)
                         else:
                             init_raw["host." + key] = value            
-                self.capacity["cloud"]["init_raw"] = init_raw
+                self.capacity["cloud"]["raw"] = dict()
+                self.capacity["cloud"]["raw"]["init"] = init_raw
             else:
                 self.logger.info('Cloud flavour detected, but capacity is missing. Initialization was unsuccessful.')
                 return False
+            self.capacity["cloud"][self.capacity["cloud"]["type"]]["free"] = \
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["init"].copy()
+            if self.capacity["cloud"]["type"] == "flavour":
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["reserved"] = dict()
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["assigned"] = dict()
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["allocated"] = dict()            
+            if self.capacity["cloud"]["type"] == "raw":
+                init_dict={}
+                for prop in self.calc_res_props:
+                    init_dict[prop] = 0
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["reserved"] = init_dict.copy()
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["assigned"] = init_dict.copy()
+                self.capacity["cloud"][self.capacity["cloud"]["type"]]["allocated"] = init_dict.copy()            
             self.logger.debug("Initialized capacity:\n %s", yaml.dump(self.capacity, default_flow_style=False))
         return True
 
@@ -100,26 +118,25 @@ class SwChCapacityRegistry:
             return 0
         if flavor_name not in self.capacity["cloud"]["flavours"]:
             return 0
-        if self.capacity["cloud"]["type"] == "init_flavour":
-            available_amount = self.capacity["cloud"]["init_flavour"].get(flavor_name, 0)
+        if self.capacity["cloud"]["type"] == "flavour":
+            available_amount = self.capacity["cloud"]["flavour"]["init"].get(flavor_name, 0)
             available_instances = min(required_instance, available_amount)
             self.logger.debug(f"Available amount of flavor '{flavor_name}': {available_amount}")
             self.logger.debug(f"Required instances of flavor '{flavor_name}': {required_instance}")
             self.logger.debug(f"Available instances of flavor '{flavor_name}': {available_instances}")
             return available_instances
-        if self.capacity["cloud"]["type"] == "init_raw":
-            prop_names = ["host.num-cpus", "host.mem-size", "host.disk-size"]
-            available_props = dict((prop, value) for prop, value in self.capacity["cloud"]["init_raw"].items() if prop in prop_names)
+        if self.capacity["cloud"]["type"] == "raw":
+            available_props = dict((prop, value) for prop, value in self.capacity["cloud"]["raw"]["init"].items() if prop in self.calc_res_props)
             self.logger.debug(f"Available raw resources for flavor: {flavor_name}")
             self.logger.debug(f"\t\t{available_props}")
-            required_props_per_flavor = dict((prop, value) for prop, value in self.capacity["cloud"]["flavours"][flavor_name].items() if prop in prop_names)
+            required_props_per_flavor = dict((prop, value) for prop, value in self.capacity["cloud"]["flavours"][flavor_name].items() if prop in self.calc_res_props)
             self.logger.debug(f"Required raw resources per unit of flavor: {flavor_name}")
             self.logger.debug(f"\t\t{required_props_per_flavor}")
             self.logger.debug("Required instances of flavor: %d", required_instance)
             counter, found = required_instance, False
             while counter > 0 and not found:
                 found = True
-                for prop in prop_names:
+                for prop in self.calc_res_props:
                     if available_props.get(prop, 0) < (required_props_per_flavor.get(prop, 0) * counter):
                         counter -= 1
                         found = False
@@ -134,36 +151,52 @@ class SwChCapacityRegistry:
         }
         return offer
     
+    def change_resource_state(self, swarmid: str, flavor_name: str, num_instances: int, from_state: str, to_state: str):
+        self.logger.debug(f"Changing state: '{swarmid}', '{flavor_name}', {num_instances}, '{from_state}', '{to_state}'")  
+        type = self.capacity["cloud"]["type"]
+        if type == "flavour":
+            self.capacity["cloud"][type][from_state][flavor_name] -= num_instances
+            self.capacity["cloud"][type][to_state][flavor_name] += num_instances
+        if type == "raw":
+            for prop in self.calc_res_props:
+                self.capacity["cloud"]["raw"][from_state][prop] -= (self.capacity["cloud"]["flavours"][flavor_name][prop] * num_instances)
+                self.capacity["cloud"]["raw"][to_state][prop] += (self.capacity["cloud"]["flavours"][flavor_name][prop] * num_instances)
+        return
+    
     def dump_capacity_registry_info(self):
         #Dumping capacity registry information in a human-readable format
         self.logger.info('Dumping capacity registry information:')
         self.logger.info('Cloud:')
         #Dumping flavor definitions
-        column_format = "\t{:25.25s}{:>10s}{:>10s}{:>10s}"
-        self.logger.info(column_format.format("Flavours","CPU","RAM","DISK"))
+        column_format = "\t{:25.25s}" + ("{:>10s}" * len(self.calc_res_props))
+        self.logger.info(column_format.format("Flavours", *[prop.upper() for prop in self.calc_res_props]))
         for act_flavor_type, act_flavor_data in self.capacity["cloud"]["flavours"].items():
             self.logger.info(column_format.format(
                 act_flavor_type.upper(),
-                str(act_flavor_data["host.num-cpus"]),
-                str(act_flavor_data["host.mem-size"]),
-                str(act_flavor_data["host.disk-size"])))
+                *[str(act_flavor_data.get(prop, 0)) for prop in self.calc_res_props]))
         #Dumping initial capacity by flavour        
-        if self.capacity["cloud"]["type"] == "init_flavour":
+        if self.capacity["cloud"]["type"] == "flavour":
             self.logger.info('')
-            column_format = "\t{:25.25s}{:>10s}"
-            self.logger.info(column_format.format("Capacity", "Max"))
-            for act_flavor_type, act_flavor_amount in self.capacity["cloud"]["init_flavour"].items():
-                self.logger.info(column_format.format(act_flavor_type.upper(), str(act_flavor_amount)))
+            column_format = "\t{:25.25s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}"
+            self.logger.info(column_format.format("Capacity", "Free", "Reserved", "Assigned", "Allocated", "Init"))
+            for act_flavor_type, act_flavor_amount in self.capacity["cloud"]["flavour"]["init"].items():
+                free = self.capacity["cloud"]["flavour"]["free"].get(act_flavor_type, 0)
+                reserved = self.capacity["cloud"]["flavour"]["reserved"].get(act_flavor_type, 0)
+                assigned = self.capacity["cloud"]["flavour"]["assigned"].get(act_flavor_type, 0)
+                allocated = self.capacity["cloud"]["flavour"]["allocated"].get(act_flavor_type, 0)
+                init = self.capacity["cloud"]["flavour"]["init"].get(act_flavor_type, 0)
+                self.logger.info(column_format.format(act_flavor_type.upper(), str(free), \
+                                                      str(reserved), str(assigned), str(allocated), str(init)))
         #Dumping initial capacity by raw
-        if self.capacity["cloud"]["type"] == "init_raw":
+        if self.capacity["cloud"]["type"] == "raw":
             self.logger.info('')
-            column_format = "\t{:25.25s}{:>10s}{:>10s}{:>10s}"
-            self.logger.info(column_format.format("Capacity", "CPU", "RAM", "DISK"))
-            self.logger.info(column_format.format(
-                "Max",
-                str(self.capacity["cloud"]["init_raw"]["host.num-cpus"]),
-                str(self.capacity["cloud"]["init_raw"]["host.mem-size"]),
-                str(self.capacity["cloud"]["init_raw"]["host.disk-size"])))
+            columns = min(len(self.calc_res_props), len(self.calc_res_props_labels))
+            column_format = "\t{:25.25s}" + ("{:>10s}" * columns)
+            self.logger.info(column_format.format("Capacity", *[label for label in self.calc_res_props_labels[:columns]]))
+            for status in ["free", "reserved", "assigned", "allocated", "init"]:
+                self.logger.info(column_format.format(
+                    status.capitalize(),
+                    *[str(self.capacity["cloud"]["raw"][status].get(prop, 0)) for prop in self.calc_res_props][:columns]))
         """
         print(f"\r\n\tReservations:\t{no_of_reservations}")
         for id, value in capacity["reservations"].items():
