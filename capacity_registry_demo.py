@@ -8,19 +8,21 @@ if __name__ == "__main__":
     capreg.initialize_capacity_from_file("sztaki-capacity-raw.yaml")
     capreg.dump_capacity_registry_info()
 
-    requirement_SAT = capreg.extract_application_requirements_from_SAT("stressng-and-resource.yaml")
+    requirements = capreg.extract_application_requirements_from_SAT("BookInfo-simple.yaml")
 
-    matching_resources = capreg.get_matching_resources(requirement_SAT)
+    matching_resources = capreg.calculate_matching_resources(requirements)
  
-    swarmid = "swarm1"
-    for flavor_name in matching_resources:
-        available_instances = capreg.get_available_instances_for_a_flavour(flavor_name,12)
-        capreg.change_resource_state(swarmid, flavor_name, available_instances, "free", "reserved")
-        capreg.dump_capacity_registry_info()
-        capreg.change_resource_state(swarmid, flavor_name, available_instances-1, "reserved", "assigned")
-        capreg.dump_capacity_registry_info()
-        capreg.change_resource_state(swarmid, flavor_name, available_instances-2, "assigned", "allocated")
-        capreg.dump_capacity_registry_info()
+    for node, matching_flavors in matching_resources.items():
+        for flavor_name in matching_flavors:
+            print(f"                                Calculating available instances for Node '{node}' with matching flavor '{flavor_name}'")
+            available_instances = capreg.calculate_available_instances_for_a_flavour(flavor_name,3)
+            if available_instances > 2:
+                capreg.change_resource_state(node, flavor_name, available_instances, "free", "reserved")
+                capreg.dump_capacity_registry_info()
+                capreg.change_resource_state(node, flavor_name, available_instances-1, "reserved", "assigned")
+                capreg.dump_capacity_registry_info()
+                capreg.change_resource_state(node, flavor_name, available_instances-2, "assigned", "allocated")
+                capreg.dump_capacity_registry_info()
 
 
 

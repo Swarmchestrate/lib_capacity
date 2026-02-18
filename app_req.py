@@ -71,8 +71,8 @@ class AppReq:
                         var = prop_key(prop_path)
                         val = lt[1]
                         return f"(vals[{repr(var)}] < {val})"
-                if '$greater_equal' in filt:
-                    ge = filt['$greater_equal']
+                if '$greater_or_equal' in filt:
+                    ge = filt['$greater_or_equal']
                     if (
                         isinstance(ge, list)
                         and len(ge) == 2
@@ -83,8 +83,8 @@ class AppReq:
                         var = prop_key(prop_path)
                         val = ge[1]
                         return f"(vals[{repr(var)}] >= {val})"
-                if '$smaller_equal' in filt:
-                    le = filt['$smaller_equal']
+                if '$smaller_or_equal' in filt:
+                    le = filt['$smaller_or_equal']
                     if (
                         isinstance(le, list)
                         and len(le) == 2
@@ -106,12 +106,11 @@ class AppReq:
             return "True"
 
         exprs = []
-        for app_name, app_list in app_req_dict.items():
-            for app in app_list:
-                host = app.get('host', {})
-                node_filter = host.get('node_filter', None)
-                if node_filter:
-                    exprs.append(parse_filter(node_filter))
+        for app in app_req_dict:
+            host = app.get('host', {})
+            node_filter = host.get('node_filter', None)
+            if node_filter:
+                exprs.append(parse_filter(node_filter))
 
         if exprs:
             logic = ' and '.join(exprs)

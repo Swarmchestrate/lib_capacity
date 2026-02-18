@@ -41,10 +41,12 @@ class SwChCapacityRegistry:
             if 'requirements' in node:
                 requirements[node_name] = node['requirements']
         
+        self.logger.debug("Requirement expression for nodes:")
         app_req = AppReq()
-        requirements_logic = app_req.parse(requirements)
-        self.logger.debug("Requirement expression:")
-        self.logger.debug("  %s", requirements_logic)
+        requirements_logic = dict()
+        for node_name, reqs in requirements.items():
+            requirements_logic[node_name] = app_req.parse(reqs)
+            self.logger.debug("  %s:  %s", node_name,requirements_logic[node_name])
     
         return requirements_logic
 
@@ -99,40 +101,43 @@ class SwChCapacityRegistry:
             self.logger.debug("Initialized capacity:\n %s", yaml.dump(self.capacity, default_flow_style=False))
         return True
 
-    def get_matching_resources(self, requirement_SAT: str):
-        matching_resources = []
+    def calculate_matching_resources(self, requirements: list = []):
+        matching_resources = dict()
         app_req = AppReq()
-        self.logger.debug("Evaluating requirement expressions against cloud flavors:")
-        for flavor_name, flavor_data in self.capacity["cloud"]["flavours"].items():
-            try:
-                result = app_req.eval_app_req_with_vars(requirement_SAT, [flavor_data])
-                self.logger.debug(f"  {flavor_name} : {result[0]}")
-                if result[0] == True:
-                    matching_resources.append(flavor_name)
-            except Exception as e:
-                self.logger.debug(f"Error evaluating requirement expression for flavor '{flavor_name}': {e}")
+        self.logger.debug("Calculating matching resources:")
+        for node in requirements.keys():
+            self.logger.debug(f"  {node}")
+            matching_resources[node] = []
+            for flavor_name, flavor_data in self.capacity["cloud"]["flavours"].items():
+                try:
+                    result = app_req.eval_app_req_with_vars(requirements[node], [flavor_data])
+                    self.logger.debug(f"    {flavor_name} : {result[0]}")
+                    if result[0] == True:
+                        matching_resources[node].append(flavor_name)
+                except Exception as e:
+                    self.logger.debug(f"Error evaluating requirement expression for flavor '{flavor_name}': {e}")
         return matching_resources
     
-    def get_available_instances_for_a_flavour(self, flavor_name: str, required_instance: int = 1):
+    def calculate_available_instances_for_a_flavour(self, flavor_name: str, required_instance: int = 1):
         if "cloud" not in self.capacity or "flavours" not in self.capacity["cloud"]:
             return 0
         if flavor_name not in self.capacity["cloud"]["flavours"]:
             return 0
         if self.capacity["cloud"]["type"] == "flavour":
-            available_amount = self.capacity["cloud"]["flavour"]["init"].get(flavor_name, 0)
+            available_amount = self.capacity["cloud"]["flavour"]["free"].get(flavor_name, 0)
             available_instances = min(required_instance, available_amount)
             self.logger.debug(f"Available amount of flavor '{flavor_name}': {available_amount}")
             self.logger.debug(f"Required instances of flavor '{flavor_name}': {required_instance}")
             self.logger.debug(f"Available instances of flavor '{flavor_name}': {available_instances}")
             return available_instances
         if self.capacity["cloud"]["type"] == "raw":
-            available_props = dict((prop, value) for prop, value in self.capacity["cloud"]["raw"]["init"].items() if prop in self.calc_res_props)
-            self.logger.debug(f"Available raw resources for flavor: {flavor_name}")
-            self.logger.debug(f"\t\t{available_props}")
+            available_props = dict((prop, value) for prop, value in self.capacity["cloud"]["raw"]["free"].items() if prop in self.calc_res_props)
+            self.logger.debug(f"\tFree resources for flavor '{flavor_name}':")
+            self.logger.debug("\t\t"+", ".join([f"{label}: {available_props.get(prop, 0)}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
             required_props_per_flavor = dict((prop, value) for prop, value in self.capacity["cloud"]["flavours"][flavor_name].items() if prop in self.calc_res_props)
-            self.logger.debug(f"Required raw resources per unit of flavor: {flavor_name}")
-            self.logger.debug(f"\t\t{required_props_per_flavor}")
-            self.logger.debug("Required instances of flavor: %d", required_instance)
+            self.logger.debug(f"\tRequired resources per unit of flavor '{flavor_name}':")
+            self.logger.debug("\t\t"+", ".join([f"{label}: {required_props_per_flavor.get(prop, 0)}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
+            self.logger.debug(f"\tRequired instances of flavor '{flavor_name}': {required_instance}")
             counter, found = required_instance, False
             while counter > 0 and not found:
                 found = True
@@ -141,7 +146,9 @@ class SwChCapacityRegistry:
                         counter -= 1
                         found = False
                         break
-            self.logger.debug(f"Available amount for flavor '{flavor_name}': {counter}")
+            self.logger.debug(f"\tAvailable instances of flavor '{flavor_name}': {counter}")
+            self.logger.debug(f"\tCalculated amount for '{counter}' instances of flavor '{flavor_name}':")
+            self.logger.debug("\t\t"+", ".join([f"{label}: {required_props_per_flavor.get(prop, 0)*counter}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
             return counter
         
     def generate_offer_for_requirements(self, swarmid: str, requirement_SAT: str):
@@ -169,12 +176,12 @@ class SwChCapacityRegistry:
         self.logger.info('Cloud:')
         #Dumping flavor definitions
         column_format = "\t{:25.25s}" + ("{:>10s}" * len(self.calc_res_props))
-        self.logger.info(column_format.format("Flavours", *[prop.upper() for prop in self.calc_res_props]))
+        self.logger.info(column_format.format("Flavours", *[label for label in self.calc_res_props_labels]))
         for act_flavor_type, act_flavor_data in self.capacity["cloud"]["flavours"].items():
             self.logger.info(column_format.format(
                 act_flavor_type.upper(),
                 *[str(act_flavor_data.get(prop, 0)) for prop in self.calc_res_props]))
-        #Dumping initial capacity by flavour        
+        #Dumping capacity by flavour        
         if self.capacity["cloud"]["type"] == "flavour":
             self.logger.info('')
             column_format = "\t{:25.25s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}"
@@ -187,7 +194,7 @@ class SwChCapacityRegistry:
                 init = self.capacity["cloud"]["flavour"]["init"].get(act_flavor_type, 0)
                 self.logger.info(column_format.format(act_flavor_type.upper(), str(free), \
                                                       str(reserved), str(assigned), str(allocated), str(init)))
-        #Dumping initial capacity by raw
+        #Dumping capacity by raw
         if self.capacity["cloud"]["type"] == "raw":
             self.logger.info('')
             columns = min(len(self.calc_res_props), len(self.calc_res_props_labels))
