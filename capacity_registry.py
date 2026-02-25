@@ -321,12 +321,12 @@ class SwChCapacityRegistry:
             self.logger.info(f"\t{SwarmID:15s} {MSID:15s} {FlavourID:20s} {State:10s}{Count:>5s}")
 
         self.logger.info('Swarm:')
-        _printaline(SwarmID='SwarmID', MSID='MSID', FlavourID='Flavour/Edge ID', State='State', Count='Count')
+        _printaline(SwarmID='Swarm', MSID='Microservice', FlavourID='Flavour/Edge', State='State', Count='Count')
         for swarmid, swarm in self.capacity["swarm"].items():
             _printaline(SwarmID=swarmid)
             for msid, ms in swarm.items():
                 _printaline(MSID=msid)
-                for restype, resources in ms.items():
+                for _, resources in ms.items():
                     for resid, rstate in resources.items():
                         for state, count in rstate.items():
                             if count > 0:
