@@ -82,7 +82,7 @@ service_template:
               - $greater_or_equal:
                   - $get_property: [ SELF, TARGET, CAPABILITY, host, num-cpus ]
                   - 1
-              - $equal:
+              - $greater_or_equal:
                   - $get_property: [ SELF, TARGET, CAPABILITY, host, mem-size ]
                   - 2
               - $equal:

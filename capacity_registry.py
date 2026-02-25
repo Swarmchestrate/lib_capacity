@@ -1,5 +1,6 @@
 
 import copy
+from itertools import count
 import logging
 import uuid
 import yaml
@@ -102,8 +103,8 @@ class SwChCapacityRegistry:
     RESOURCE_TYPES_RAW    = ["cpu", "ram", "disk", "pub_ip"]
     RESOURCE_TYPES_FLAVOR = ["cpu", "ram", "disk"] 
 
-    def __init__(self):
-        pass
+    def __init__(self, ra_id: str):
+        self.ra_id = ra_id
 
     def extract_capacity_definitions_from_CDT(self, capacity_description_filename: str):
         tosca = Sardou(capacity_description_filename)
@@ -187,19 +188,20 @@ class SwChCapacityRegistry:
         app_req = AppReq()
         self.logger.debug("Calculating matching cloud flavors:")
         for node in requirements.keys():
-            self.logger.debug(f"  {node}")
+            self.logger.debug(f"\t{node}")
             matching_flavors[node] = []
             for flavor_name, flavor_data in self.capacity["cloud"]["flavours"].items():
                 try:
                     result = app_req.eval_app_req_with_vars(requirements[node], [flavor_data])
-                    self.logger.debug(f"    {flavor_name} : {result[0]}")
+                    self.logger.debug(f"\t\t{flavor_name} : {result[0]}")
                     if result[0] == True:
                         matching_flavors[node].append(flavor_name)
                 except Exception as e:
-                    self.logger.debug(f"Error evaluating requirement expression for cloud flavor '{flavor_name}': {e}")
+                    self.logger.debug(f"\t\tError evaluating requirement expression for cloud flavor '{flavor_name}': {e}")
         return matching_flavors
     
     def calculate_available_instances_for_cloud_flavour(self, flavor_name: str, required_instance: int = 1):
+        self.logger.debug(f"Calculating available instances for cloud flavor '{flavor_name}' with required instance count {required_instance}...")
         if "cloud" not in self.capacity or "flavours" not in self.capacity["cloud"]:
             return 0
         if flavor_name not in self.capacity["cloud"]["flavours"]:
@@ -232,13 +234,6 @@ class SwChCapacityRegistry:
             self.logger.debug("\t\t"+", ".join([f"{label}: {required_props_per_flavor.get(prop, 0)*counter}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
             return counter
         
-    def generate_offer_for_requirements(self, swarmid: str, requirement_SAT: str):
-        matching_flavors = self.get_matching_cloud_flavors(requirement_SAT)
-        offer = {
-            "matching_flavors": matching_flavors
-        }
-        return offer
-
     def resource_state_init_amount(self, swarmid: str, msid: str, restype: str, resid: str, state: str, amount: int):
         self.logger.debug(f"Initializing resource amount: '{swarmid}', '{msid}', '{restype}', '{resid}', '{state}', {amount}")
         self.capacity["swarm"].setdefault(swarmid, dict())
@@ -253,21 +248,14 @@ class SwChCapacityRegistry:
 
     def resource_state_change(self, swarmid: str, msid: str, restype: str, resid: str, count: int, from_state: str, to_state: str) -> int:
         self.logger.debug(f"Changing state: '{swarmid}', '{msid}', '{restype}', '{resid}', {count}, '{from_state}', '{to_state}'")
-        self.logger.debug(f"Changing state: registering swarm...")
-             
-        if restype == "cloud":
-            rstate = self.capacity["swarm"][swarmid][msid][restype].setdefault(resid, {"free": 0, "reserved": 0, "assigned": 0, "allocated": 0})
-        if restype == "edge":
-            rstate = self.capacity["swarm"][swarmid][msid][restype].setdefault(resid, {"free": 1})
-
+        rstate = self.capacity["swarm"][swarmid][msid][restype][resid]
         if rstate[from_state] < count:
             self.logger.warning(f"Trying to change state of resource '{resid}' in swarm '{swarmid}', ms '{msid}', type '{restype}' from state '{from_state}' with count {count}, but only {rstate[from_state]} is available.")
             return None
         else:
             rstate[from_state] -= count
-            rstate[to_state] += count
-
-        self.logger.debug(f"Changing state: registering amount...")
+            if to_state != "free":
+                rstate[to_state] += count
         if restype == "cloud":   
             type = self.capacity["cloud"]["type"]
             if type == "flavour":
@@ -281,6 +269,73 @@ class SwChCapacityRegistry:
             self.logger.error(f"Unknown resource type '{restype}' for state change.")
         return count
     
+    def resource_offer_generate(self, swarmid: str, sat_filename: str):
+        self.logger.debug(f"Generating offer for swarm '{swarmid}' with requirements from '{sat_filename}'...")
+        reqs = self.extract_application_requirements_from_SAT(sat_filename)
+        matching_cloud_flavors = self.calculate_matching_cloud_flavors(reqs)
+        offers = dict()
+        for msid, matching_flavors in matching_cloud_flavors.items():
+            instance_count_required=1
+            for flavor_name in matching_flavors:
+                available_instances = self.calculate_available_instances_for_cloud_flavour(flavor_name,instance_count_required)
+                if available_instances >= instance_count_required:
+                    self.resource_state_init_amount(swarmid, msid, "cloud", flavor_name, "free", available_instances)
+                    self.resource_state_change(swarmid, msid, "cloud", flavor_name, available_instances, "free", "reserved")
+                    #query provider information for the flavor
+                    provider_id = self.capacity["cloud"]["flavours"][flavor_name]["resource.provider"]
+                    #query characteristics for the flavor
+                    characteristic_names = ["pricing.cost",
+                                            "energy.consumption",
+                                            "host.bandwidth"]
+                    characteristics = dict()
+                    for characteristic_name in characteristic_names:
+                        characteristics[characteristic_name] = self.capacity["cloud"]["flavours"][flavor_name].get(characteristic_name, None)
+                    #compose offer
+                    offerid = self.ra_id + "_" + swarmid + "_" + msid + "_" + flavor_name 
+                    offers[offerid] = dict({
+                            "ids": {
+                                "offer_id": offerid,
+                                "ra_id": self.ra_id,
+                                "swarm_id": swarmid,
+                                "ms_id": msid,
+                                "provider_id": provider_id,
+                                "res_type": "cloud",
+                                "res_id": flavor_name,
+                                "count": available_instances
+                            },
+                            "characteristics": characteristics})
+                    self.dump_capacity_registry_info()
+        self.logger.debug(f"Generating offer for swarm '{swarmid}' with requirements from '{sat_filename}' finished.")
+        return offers
+    
+    def resource_offer_accepted(self, offer: dict):
+        offerid = offer["ids"]["offer_id"]
+        swarmid = offer["ids"]["swarm_id"]
+        self.logger.debug(f"Accepting offer '{offerid}' for swarm '{swarmid}'...")
+        msid = offer["ids"]["ms_id"]
+        resid = offer["ids"]["res_id"]
+        # Change state of resource from reserved to assigned
+        if self.resource_state_change(swarmid, msid, "cloud", resid, 1, "reserved", "assigned"):
+            self.logger.debug(f"Accepting offer '{offerid}' for swarm '{swarmid}' succeeded.")
+            return True
+        else:
+            self.logger.error(f"Failed to change state for resource in offer '{offerid}' for swarm '{swarmid}'")
+            return False
+
+    def resource_offer_rejected(self, offer: dict):
+        offerid = offer["ids"]["offer_id"]
+        swarmid = offer["ids"]["swarm_id"]
+        self.logger.debug(f"Rejecting offer '{offerid}' for swarm '{swarmid}'...")
+        msid = offer["ids"]["ms_id"]
+        resid = offer["ids"]["res_id"]
+        # Change state of resource from reserved to free
+        if self.resource_state_change(swarmid, msid, "cloud", resid, 1, "reserved", "free"):
+            self.logger.debug(f"Rejecting offer '{offerid}' for swarm '{swarmid}' succeeded.")
+            return True
+        else:
+            self.logger.error(f"Failed to change state for resource in offer '{offerid}' for swarm '{swarmid}'")
+            return False
+
     def dump_capacity_registry_info(self):
         #Dumping capacity registry information in a human-readable format
         self.logger.info('Dumping capacity registry information:')
