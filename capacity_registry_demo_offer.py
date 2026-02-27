@@ -9,49 +9,45 @@ if __name__ == "__main__":
     capreg.dump_capacity_registry_info()
 
     sat_filename="BookInfo-simple.yaml"
-    #Generating offers for swarm 'swarm1' based on the requirements in 'BookInfo-simple.yaml'
+    #Generating offers for 'swarm1' and rejecting all offers for demonstration purposes
     swarmid="swarm1"
     offers = capreg.resource_offer_generate(swarmid, sat_filename)
     print("Generated offers:")
     pprint.pprint(offers)
     capreg.dump_capacity_registry_info()
     #Rejecting all offers for demonstration purposes
-    for offer_id, offer in offers.items():
-        print(f"REJECTING OFFER:")
-        pprint.pprint(offer)
-        capreg.resource_offer_rejected(offer)
+    for ms_id, ms_offer in offers.items():
+        for offer_id, offer in ms_offer.items():
+            capreg.resource_offer_rejected(offer_id, offer)
     capreg.dump_capacity_registry_info()
 
-    #Generating offers for swarm 'swarm2' based on the requirements in 'BookInfo-simple.yaml'
+    #Generating offers for 'swarm2' and accepting all offers for demonstration purposes
     swarmid="swarm2"
     offers = capreg.resource_offer_generate(swarmid, sat_filename)
     print("Generated offers:")
     pprint.pprint(offers)
     capreg.dump_capacity_registry_info()
     #Accepting all offers for demonstration purposes
-    for offer_id, offer in offers.items():
-        print(f"ACCEPTING OFFER:")
-        pprint.pprint(offer)
-        capreg.resource_offer_accepted(offer)
+    for ms_id, ms_offers in offers.items():
+        for offer_id, offer in ms_offers.items():
+            capreg.resource_offer_accepted(offer_id, offer)
     capreg.dump_capacity_registry_info()
 
-    #Generating offers for swarm 'swarm3' based on the requirements in 'BookInfo-simple.yaml'
+    #Generating offers for 'swarm3' and partially accept and reject offers for demonstration purposes
     swarmid="swarm3"
     offers = capreg.resource_offer_generate(swarmid, sat_filename)
     print("Generated offers:")
     pprint.pprint(offers)
     capreg.dump_capacity_registry_info()
     #Accepting one of three offers
-    print(f"ACCEPTING OFFER:")
-    offer = offers[list(offers.keys())[0]]
-    pprint.pprint(offer)
-    capreg.resource_offer_accepted(offer)
+    offerid = list(offers["one"].keys())[0]
+    capreg.resource_offer_accepted(offerid, 
+                                   offers["one"][offerid])
     capreg.dump_capacity_registry_info()
     #Rejecting one of three offers
-    print(f"REJECTING OFFER:")
-    offer = offers[list(offers.keys())[1]]
-    pprint.pprint(offer)
-    capreg.resource_offer_rejected(offer)
+    offerid = list(offers["two"].keys())[0]
+    capreg.resource_offer_rejected(offerid, 
+                                   offers["two"][offerid])
     capreg.dump_capacity_registry_info()
 
 

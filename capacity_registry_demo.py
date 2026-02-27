@@ -3,7 +3,7 @@ import yaml
 import pprint
 
 if __name__ == "__main__":
-    capreg = SwChCapacityRegistry()
+    capreg = SwChCapacityRegistry("ra-sztaki-cloud-hu")
     capreg.initialize_capacity_from_file("sztaki-capacity-raw.yaml")
     #capreg.initialize_capacity_from_file("sztaki-capacity-flavor.yaml")
     capreg.dump_capacity_registry_info()

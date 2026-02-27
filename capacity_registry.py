@@ -270,12 +270,14 @@ class SwChCapacityRegistry:
         return count
     
     def resource_offer_generate(self, swarmid: str, sat_filename: str):
+        import random
         self.logger.debug(f"Generating offer for swarm '{swarmid}' with requirements from '{sat_filename}'...")
         reqs = self.extract_application_requirements_from_SAT(sat_filename)
         matching_cloud_flavors = self.calculate_matching_cloud_flavors(reqs)
         offers = dict()
         for msid, matching_flavors in matching_cloud_flavors.items():
-            instance_count_required=1
+            #instance_count_required=random.randint(1,2) #FIX: should read this number from SAT, currently unspecified
+            instance_count_required = 1
             for flavor_name in matching_flavors:
                 available_instances = self.calculate_available_instances_for_cloud_flavour(flavor_name,instance_count_required)
                 if available_instances >= instance_count_required:
@@ -291,50 +293,69 @@ class SwChCapacityRegistry:
                     for characteristic_name in characteristic_names:
                         characteristics[characteristic_name] = self.capacity["cloud"]["flavours"][flavor_name].get(characteristic_name, None)
                     #compose offer
-                    offerid = self.ra_id + "_" + swarmid + "_" + msid + "_" + flavor_name 
-                    offers[offerid] = dict({
-                            "ids": {
-                                "offer_id": offerid,
-                                "ra_id": self.ra_id,
-                                "swarm_id": swarmid,
-                                "ms_id": msid,
-                                "provider_id": provider_id,
-                                "res_type": "cloud",
-                                "res_id": flavor_name,
-                                "count": available_instances
-                            },
-                            "characteristics": characteristics})
+                    offerid = self.ra_id + "_" + swarmid + "_" + msid + "_" + flavor_name
+                    if available_instances > 1:
+                        instance_list = list() 
+                        for instance_index in range(available_instances):
+                            instance_list.append(dict({
+                                    "ids": {
+                                        "offer_id": offerid+"_"+str(instance_index),
+                                        "ra_id": self.ra_id,
+                                        "swarm_id": swarmid,
+                                        "ms_id": msid,
+                                        "provider_id": provider_id,
+                                        "res_type": "cloud",
+                                        "res_id": flavor_name
+                                    },
+                                    "characteristics": characteristics}))
+                        offers.setdefault(msid,dict())
+                        offers[msid][offerid]=instance_list
+                    else:
+                        offers.setdefault(msid,dict())
+                        offers[msid][offerid]=dict({
+                                    "ids": {
+                                        "offer_id": offerid,
+                                        "ra_id": self.ra_id,
+                                        "swarm_id": swarmid,
+                                        "ms_id": msid,
+                                        "provider_id": provider_id,
+                                        "res_type": "cloud",
+                                        "res_id": flavor_name
+                                    },
+                                    "characteristics": characteristics})
                     self.dump_capacity_registry_info()
         self.logger.debug(f"Generating offer for swarm '{swarmid}' with requirements from '{sat_filename}' finished.")
         return offers
     
-    def resource_offer_accepted(self, offer: dict):
-        offerid = offer["ids"]["offer_id"]
-        swarmid = offer["ids"]["swarm_id"]
-        self.logger.debug(f"Accepting offer '{offerid}' for swarm '{swarmid}'...")
-        msid = offer["ids"]["ms_id"]
-        resid = offer["ids"]["res_id"]
-        # Change state of resource from reserved to assigned
-        if self.resource_state_change(swarmid, msid, "cloud", resid, 1, "reserved", "assigned"):
-            self.logger.debug(f"Accepting offer '{offerid}' for swarm '{swarmid}' succeeded.")
-            return True
-        else:
-            self.logger.error(f"Failed to change state for resource in offer '{offerid}' for swarm '{swarmid}'")
-            return False
+    def resource_offer_accepted(self, offerid: str, offer: list | dict):
+        offers = list([offer]) if isinstance(offer, dict) else offer
+        for offer in offers:
+            swarmid = offer["ids"]["swarm_id"]
+            self.logger.debug(f"Accepting offer '{offerid}' for swarm '{swarmid}'...")
+            msid = offer["ids"]["ms_id"]
+            resid = offer["ids"]["res_id"]
+            # Change state of resource from reserved to assigned
+            if self.resource_state_change(swarmid, msid, "cloud", resid, 1, "reserved", "assigned"):
+                self.logger.debug(f"Accepting offer '{offerid}' for swarm '{swarmid}' succeeded.")
+            else:
+                self.logger.error(f"Failed to change state for resource in offer '{offerid}' for swarm '{swarmid}'")
+                return False
+        return True
 
-    def resource_offer_rejected(self, offer: dict):
-        offerid = offer["ids"]["offer_id"]
-        swarmid = offer["ids"]["swarm_id"]
-        self.logger.debug(f"Rejecting offer '{offerid}' for swarm '{swarmid}'...")
-        msid = offer["ids"]["ms_id"]
-        resid = offer["ids"]["res_id"]
-        # Change state of resource from reserved to free
-        if self.resource_state_change(swarmid, msid, "cloud", resid, 1, "reserved", "free"):
-            self.logger.debug(f"Rejecting offer '{offerid}' for swarm '{swarmid}' succeeded.")
-            return True
-        else:
-            self.logger.error(f"Failed to change state for resource in offer '{offerid}' for swarm '{swarmid}'")
-            return False
+    def resource_offer_rejected(self, offerid: str, offer: list | dict):
+        offers = list([offer]) if isinstance(offer, dict) else offer
+        for offer in offers:
+            swarmid = offer["ids"]["swarm_id"]
+            self.logger.debug(f"Rejecting offer '{offerid}' for swarm '{swarmid}'...")
+            msid = offer["ids"]["ms_id"]
+            resid = offer["ids"]["res_id"]
+            # Change state of resource from reserved to free
+            if self.resource_state_change(swarmid, msid, "cloud", resid, 1, "reserved", "free"):
+                self.logger.debug(f"Rejecting offer '{offerid}' for swarm '{swarmid}' succeeded.")
+            else:
+                self.logger.error(f"Rejecting offer '{offerid}' for swarm '{swarmid}' failed.")
+                return False
+        return True
 
     def dump_capacity_registry_info(self):
         #Dumping capacity registry information in a human-readable format
