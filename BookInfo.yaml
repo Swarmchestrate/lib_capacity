@@ -114,6 +114,9 @@ service_template:
               - $greater_or_equal:
                   - $get_property: [ SELF, TARGET, CAPABILITY, host, mem-size ]
                   - 2
+              - $equal:
+                  - $get_property: [ SELF, TARGET, CAPABILITY, locality, city ]
+                  - budapest
         
 
 
@@ -148,11 +151,10 @@ service_template:
             $and:
               - $greater_or_equal:
                   - $get_property: [ SELF, TARGET, CAPABILITY, host, num-cpus ]
-                  - 1
+                  - 2
               - $greater_or_equal:
                   - $get_property: [ SELF, TARGET, CAPABILITY, host, mem-size ]
-                  - 2
-
+                  - 4
     reviews_v2:
       type: swch:Microservice
       properties:
@@ -181,10 +183,10 @@ service_template:
             $and:
               - $greater_or_equal:
                   - $get_property: [ SELF, TARGET, CAPABILITY, host, num-cpus ]
-                  - 1
+                  - 2
               - $greater_or_equal:
                   - $get_property: [ SELF, TARGET, CAPABILITY, host, mem-size ]
-                  - 2
+                  - 4
 
     reviews_v3:
       type: swch:Microservice
@@ -214,10 +216,10 @@ service_template:
             $and:
               - $greater_or_equal:
                   - $get_property: [ SELF, TARGET, CAPABILITY, host, num-cpus ]
-                  - 1
+                  - 2
               - $greater_or_equal:
                   - $get_property: [ SELF, TARGET, CAPABILITY, host, mem-size ]
-                  - 2
+                  - 4
 
     ###########################################################################
     # Productpage (deployment productpage-v1 + service productpage)
