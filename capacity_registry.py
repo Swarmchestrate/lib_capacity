@@ -154,6 +154,12 @@ class SwChCapacityRegistry:
 
     def initialize_capacity_from_file(self, filename: str):
         tosca_capacity = self.extract_capacity_definitions_from_CDT(filename)
+        # FIXME: a workaround to test edge capacity handling, 
+        # the next 4 lines must be removed once Sardou is fixed.
+        a_flavor = list(tosca_capacity["flavour"].keys())[0]
+        if tosca_capacity["flavour"].get(a_flavor, {}).get("resource", {}).get("type", "") == "edge":
+            del tosca_capacity["capacity_flavour"]
+            tosca_capacity["edge"] = tosca_capacity.pop("flavour")
         self.logger.debug("Capacity read from file:\n %s", yaml.dump(tosca_capacity, default_flow_style=False))
         self.initialize(init_capacity=tosca_capacity)
         return
@@ -207,70 +213,109 @@ class SwChCapacityRegistry:
                 self.capacity["cloud"][self.capacity["cloud"]["type"]]["assigned"] = init_dict.copy()
                 self.capacity["cloud"][self.capacity["cloud"]["type"]]["allocated"] = init_dict.copy()            
             self.logger.debug("Initialized capacity:\n %s", yaml.dump(self.capacity, default_flow_style=False))
+        if "edge" in init_capacity:
+            self.capacity["edge"] = dict()
+            self.capacity["edge"]["capacities"] = dict()
+            rescap = ResCap()
+            for act_instance, act_instance_data in init_capacity["edge"].items():
+                self.capacity["edge"]["capacities"][act_instance] = rescap.parse(act_instance_data)
+
+            init_dict = self.capacity["edge"]["capacities"].copy()
+            self.capacity["edge"]["instances"] = dict()
+            for instance in init_dict.keys():
+                init_dict[instance] = 1
+            self.capacity["edge"]["instances"]["init"] = init_dict.copy()
+            self.capacity["edge"]["instances"]["free"] = init_dict.copy()
+            for instance in init_dict.keys():
+                init_dict[instance] = 0
+            self.capacity["edge"]["instances"]["reserved"] = init_dict.copy()
+            self.capacity["edge"]["instances"]["assigned"] = init_dict.copy()
+            self.capacity["edge"]["instances"]["allocated"] = init_dict.copy() 
+            self.logger.debug("Initialized capacity:\n %s", yaml.dump(self.capacity, default_flow_style=False))
         return True
 
-    def calculate_matching_cloud_flavors(self, requirements: list = []):
-        matching_flavors = dict()
+    def calculate_matching_resources(self, requirements: list = []):
+        matching_resources = dict()
         app_req = AppReq()
-        self.logger.debug("Calculating matching cloud flavors:")
-        for node in requirements.keys():
-            self.logger.debug(f"\t{node}")
-            matching_flavors[node] = []
-            for flavor_name, flavor_data in self.capacity["cloud"]["flavours"].items():
-                try:
-                    result = app_req.eval_app_req_with_vars(requirements[node]["expression"], [flavor_data])
-                    self.logger.debug(f"\t\t{flavor_name} : {result[0]}")
-                    if result[0] == True:
-                        matching_flavors[node].append(flavor_name)
-                except Exception as e:
-                    self.logger.debug(f"\t\tError evaluating requirement expression for cloud flavor '{flavor_name}': {e}")
-        return matching_flavors
+        self.logger.debug("Calculating matching cloud flavors and edge instances:")
+        for msid in requirements.keys():
+            self.logger.debug(f"\t{msid}")
+            matching_resources[msid] = []
+            if "cloud" in self.capacity:
+                for flavor_name, flavor_data in self.capacity["cloud"]["flavours"].items():
+                    try:
+                        result = app_req.eval_app_req_with_vars(requirements[msid]["expression"], [flavor_data])
+                        self.logger.debug(f"\t\t{flavor_name} : {result[0]}")
+                        if result[0] == True:
+                            matching_resources[msid].append({"cloud":flavor_name})
+                    except Exception as e:
+                        self.logger.debug(f"\t\tError evaluating requirement expression for cloud flavor '{flavor_name}': {e}")
+            if "edge" in self.capacity:
+                for instance_name, instance_data in self.capacity["edge"]["capacities"].items():
+                    try:
+                        result = app_req.eval_app_req_with_vars(requirements[msid]["expression"], [instance_data])
+                        self.logger.debug(f"\t\t{instance_name} : {result[0]}")
+                        if result[0] == True:
+                            matching_resources[msid].append({"edge":instance_name})
+                    except Exception as e:
+                        self.logger.debug(f"\t\tError evaluating requirement expression for edge instance '{instance_name}': {e}")
+        return matching_resources
     
-    def calculate_available_instances_for_cloud_flavour(self, flavor_name: str, required_instance: int = 1):
-        self.logger.debug(f"Calculating available instances for cloud flavor '{flavor_name}' with required instance count {required_instance}...")
-        if "cloud" not in self.capacity or "flavours" not in self.capacity["cloud"]:
-            return 0
-        if flavor_name not in self.capacity["cloud"]["flavours"]:
-            return 0
-        if self.capacity["cloud"]["type"] == "flavour":
-            available_amount = self.capacity["cloud"]["flavour"]["free"].get(flavor_name, 0)
+    def calculate_available_instances_of_resources(self, res_type: str, res_name: str, required_instance: int = 1):
+        self.logger.debug(f"Calculating available instances for {res_type} '{res_name}' with required instance count {required_instance}...")
+        if res_type == "cloud":
+            if "cloud" not in self.capacity or "flavours" not in self.capacity["cloud"]:
+                return 0
+            if res_name not in self.capacity["cloud"]["flavours"]:
+                return 0
+            if self.capacity["cloud"]["type"] == "flavour":
+                available_amount = self.capacity["cloud"]["flavours"]["free"].get(res_name, 0)
+                available_instances = min(required_instance, available_amount)
+                self.logger.debug(f"\tFree amount of cloud flavor '{res_name}': {available_amount}")
+                self.logger.debug(f"\tRequired instances of cloud flavor '{res_name}': {required_instance}")
+                self.logger.debug(f"\tAvailable instances of cloud flavor '{res_name}': {available_instances}")
+                return available_instances
+            if self.capacity["cloud"]["type"] == "raw":
+                available_props = dict((prop, value) for prop, value in self.capacity["cloud"]["raw"]["free"].items() if prop in self.calc_res_props)
+                self.logger.debug(f"\tFree resources for cloud flavor '{res_name}':")
+                self.logger.debug("\t\t"+", ".join([f"{label}: {available_props.get(prop, 0)}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
+                required_props_per_flavor = dict((prop, value) for prop, value in self.capacity["cloud"]["flavours"][res_name].items() if prop in self.calc_res_props)
+                self.logger.debug(f"\tRequired resources per unit of cloud flavor '{res_name}':")
+                self.logger.debug("\t\t"+", ".join([f"{label}: {required_props_per_flavor.get(prop, 0)}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
+                self.logger.debug(f"\tRequired instances of cloud flavor '{res_name}': {required_instance}")
+                counter, found = required_instance, False
+                while counter > 0 and not found:
+                    found = True
+                    for prop in self.calc_res_props:
+                        if available_props.get(prop, 0) < (required_props_per_flavor.get(prop, 0) * counter):
+                            counter -= 1
+                            found = False
+                            break
+                self.logger.debug(f"\tAvailable instances of cloud flavor '{res_name}': {counter}")
+                self.logger.debug(f"\tCalculated amount for '{counter}' instances of cloud flavor '{res_name}':")
+                self.logger.debug("\t\t"+", ".join([f"{label}: {required_props_per_flavor.get(prop, 0)*counter}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
+                return counter
+        if res_type == "edge":
+            if "edge" not in self.capacity or "instances" not in self.capacity["edge"]:
+                return 0
+            if res_name not in self.capacity["edge"]["capacities"]:
+                return 0
+            available_amount = self.capacity["edge"]["instances"]["free"].get(res_name, 0)
             available_instances = min(required_instance, available_amount)
-            self.logger.debug(f"\tFree amount of cloud flavor '{flavor_name}': {available_amount}")
-            self.logger.debug(f"\tRequired instances of cloud flavor '{flavor_name}': {required_instance}")
-            self.logger.debug(f"\tAvailable instances of cloud flavor '{flavor_name}': {available_instances}")
+            self.logger.debug(f"\tFree amount of edge instance '{res_name}': {available_amount}")
+            self.logger.debug(f"\tRequired instances of edge instance '{res_name}': {required_instance}")
+            self.logger.debug(f"\tAvailable instances of edge instance '{res_name}': {available_instances}")
             return available_instances
-        if self.capacity["cloud"]["type"] == "raw":
-            available_props = dict((prop, value) for prop, value in self.capacity["cloud"]["raw"]["free"].items() if prop in self.calc_res_props)
-            self.logger.debug(f"\tFree resources for cloud flavor '{flavor_name}':")
-            self.logger.debug("\t\t"+", ".join([f"{label}: {available_props.get(prop, 0)}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
-            required_props_per_flavor = dict((prop, value) for prop, value in self.capacity["cloud"]["flavours"][flavor_name].items() if prop in self.calc_res_props)
-            self.logger.debug(f"\tRequired resources per unit of cloud flavor '{flavor_name}':")
-            self.logger.debug("\t\t"+", ".join([f"{label}: {required_props_per_flavor.get(prop, 0)}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
-            self.logger.debug(f"\tRequired instances of cloud flavor '{flavor_name}': {required_instance}")
-            counter, found = required_instance, False
-            while counter > 0 and not found:
-                found = True
-                for prop in self.calc_res_props:
-                    if available_props.get(prop, 0) < (required_props_per_flavor.get(prop, 0) * counter):
-                        counter -= 1
-                        found = False
-                        break
-            self.logger.debug(f"\tAvailable instances of cloud flavor '{flavor_name}': {counter}")
-            self.logger.debug(f"\tCalculated amount for '{counter}' instances of cloud flavor '{flavor_name}':")
-            self.logger.debug("\t\t"+", ".join([f"{label}: {required_props_per_flavor.get(prop, 0)*counter}" for label, prop in zip(self.calc_res_props_labels, self.calc_res_props)]))
-            return counter
+        return 0
         
     def resource_state_init_amount(self, swarmid: str, msid: str, restype: str, resid: str, state: str, amount: int):
         self.logger.debug(f"Initializing resource amount: '{swarmid}', '{msid}', '{restype}', '{resid}', '{state}', {amount}")
         self.capacity["swarms"].setdefault(swarmid, dict())
         self.capacity["swarms"][swarmid].setdefault(msid, dict())
         self.capacity["swarms"][swarmid][msid].setdefault(restype, dict())
-        if restype == "cloud":
-            rstate = self.capacity["swarms"][swarmid][msid][restype].setdefault(resid, {"free": 0, "reserved": 0, "assigned": 0, "allocated": 0})
-            rstate[state] = amount
-        if restype == "edge":
-            rstate = self.capacity["swarms"][swarmid][msid][restype].setdefault(resid, {"free": 1})
-            rstate[state] = amount
+        rstate = self.capacity["swarms"][swarmid][msid][restype].setdefault(resid, {"free": 0, "reserved": 0, "assigned": 0, "allocated": 0})
+        rstate[state] = amount
+        return amount
 
     def resource_state_change(self, swarmid: str, msid: str, restype: str, resid: str, count: int, from_state: str, to_state: str) -> int:
         self.logger.debug(f"Changing state: '{swarmid}', '{msid}', '{restype}', '{resid}', {count}, '{from_state}', '{to_state}'")
@@ -291,8 +336,9 @@ class SwChCapacityRegistry:
                 for prop in self.calc_res_props:
                     self.capacity["cloud"]["raw"][from_state][prop] -= (self.capacity["cloud"]["flavours"][resid][prop] * count)
                     self.capacity["cloud"]["raw"][to_state][prop] += (self.capacity["cloud"]["flavours"][resid][prop] * count)
-        else:
-            self.logger.error(f"Unknown resource type '{restype}' for state change.")
+        if restype == "edge":   
+            self.capacity["edge"]["instances"][from_state][resid] -= count
+            self.capacity["edge"]["instances"][to_state][resid] += count
         return count
     
     def resource_set_deployed(self, swarmid: str, msid: str, restype: str, resid: str, count: int):
@@ -359,27 +405,30 @@ class SwChCapacityRegistry:
         import random
         self.logger.debug(f"Generating offer for swarm '{swarmid}' with requirements from '{sat_filename}'...")
         reqs = self.extract_application_requirements_from_SAT(sat_filename)
-        matching_cloud_flavors = self.calculate_matching_cloud_flavors(reqs)
+        matching_resources = self.calculate_matching_resources(reqs)
         offers = dict()
-        for msid, matching_flavors in matching_cloud_flavors.items():
+        for msid, matching_resources in matching_resources.items():
             #instance_count_required=random.randint(1,2) #FIX: should read this number from SAT, currently unspecified
             instance_count_required = 1
-            for flavor_name in matching_flavors:
-                available_instances = self.calculate_available_instances_for_cloud_flavour(flavor_name,instance_count_required)
+            for resource in matching_resources:
+                resource_type = list(resource.keys())[0]
+                resource_name = resource[resource_type]
+                available_instances = self.calculate_available_instances_of_resources(resource_type, resource_name, instance_count_required)
                 if available_instances >= instance_count_required:
-                    self.resource_state_init_amount(swarmid, msid, "cloud", flavor_name, "free", available_instances)
-                    self.resource_state_change(swarmid, msid, "cloud", flavor_name, available_instances, "free", "reserved")
+                    self.resource_state_init_amount(swarmid, msid, resource_type, resource_name, "free", available_instances)
+                    self.resource_state_change(swarmid, msid, resource_type, resource_name, available_instances, "free", "reserved")
                     #query provider information for the flavor
-                    provider_id = self.capacity["cloud"]["flavours"][flavor_name]["resource.provider"]
+                    flavor_or_edge = "flavours" if resource_type == "cloud" else "capacities"
+                    provider_id = self.capacity[resource_type][flavor_or_edge][resource_name]["resource.provider"]
                     #query characteristics for the flavor
                     characteristic_names = ["pricing.cost",
                                             "energy.consumption",
                                             "host.bandwidth"]
                     characteristics = dict()
                     for characteristic_name in characteristic_names:
-                        characteristics[characteristic_name] = self.capacity["cloud"]["flavours"][flavor_name].get(characteristic_name, None)
+                        characteristics[characteristic_name] = self.capacity[resource_type][flavor_or_edge][resource_name].get(characteristic_name, None)
                     #compose offer
-                    offerid = self.ra_id + "_" + swarmid + "_" + msid + "_" + flavor_name
+                    offerid = self.ra_id + "_" + swarmid + "_" + msid + "_" + resource_name
                     if available_instances > 1:
                         instance_list = list() 
                         for instance_index in range(available_instances):
@@ -390,8 +439,8 @@ class SwChCapacityRegistry:
                                         "swarm_id": swarmid,
                                         "ms_id": msid,
                                         "provider_id": provider_id,
-                                        "res_type": "cloud",
-                                        "res_id": flavor_name
+                                        "res_type": resource_type,
+                                        "res_id": resource_name
                                     },
                                     "characteristics": characteristics}))
                         offers.setdefault(msid,dict())
@@ -406,10 +455,9 @@ class SwChCapacityRegistry:
                                         "ms_id": msid,
                                         "provider_id": provider_id,
                                         "res_type": "cloud",
-                                        "res_id": flavor_name
+                                        "res_id": resource_name
                                     },
                                     "characteristics": characteristics})
-                    self.dump_capacity_registry_info()
             if reqs[msid].get("colocated", []):
                 for col_node in reqs[msid]["colocated"]:
                     offers[col_node]= dict({"colocated": msid})
@@ -473,38 +521,64 @@ class SwChCapacityRegistry:
     def dump_capacity_registry_info(self):
         #Dumping capacity registry information in a human-readable format
         self.logger.info('Dumping capacity registry information:')
-        self.logger.info('Cloud:')
-        #Dumping flavor definitions
-        column_format = "\t{:25.25s}" + ("{:>10s}" * len(self.calc_res_props))
-        self.logger.info(column_format.format("Flavours", *[label for label in self.calc_res_props_labels]))
-        for act_flavor_type, act_flavor_data in self.capacity["cloud"]["flavours"].items():
-            self.logger.info(column_format.format(
-                act_flavor_type.upper(),
-                *[str(act_flavor_data.get(prop, 0)) for prop in self.calc_res_props]))
-        #Dumping capacity by flavour        
-        if self.capacity["cloud"]["type"] == "flavour":
+        if "cloud" in self.capacity:
+            self.logger.info('Cloud:')
+            #Dumping flavor definitions
+            column_format = "\t{:25.25s}" + ("{:>10s}" * len(self.calc_res_props))
+            self.logger.info(column_format.format("Flavours", *[label for label in self.calc_res_props_labels]))
+            for act_flavor_type, act_flavor_data in self.capacity["cloud"]["flavours"].items():
+                self.logger.info(column_format.format(
+                    act_flavor_type.upper(),
+                    *[str(act_flavor_data.get(prop, 0)) for prop in self.calc_res_props]))
+
+            #Dumping capacity by flavour        
+            if self.capacity["cloud"]["type"] == "flavour":
+                self.logger.info('')
+                column_format = "\t{:25.25s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}"
+                self.logger.info(column_format.format("Capacity", "Free", "Reserved", "Assigned", "Allocated", "Init"))
+                for act_flavor_type, act_flavor_amount in self.capacity["cloud"]["flavour"]["init"].items():
+                    free = self.capacity["cloud"]["flavour"]["free"].get(act_flavor_type, 0)
+                    reserved = self.capacity["cloud"]["flavour"]["reserved"].get(act_flavor_type, 0)
+                    assigned = self.capacity["cloud"]["flavour"]["assigned"].get(act_flavor_type, 0)
+                    allocated = self.capacity["cloud"]["flavour"]["allocated"].get(act_flavor_type, 0)
+                    init = self.capacity["cloud"]["flavour"]["init"].get(act_flavor_type, 0)
+                    self.logger.info(column_format.format(act_flavor_type.upper(), str(free), \
+                                                        str(reserved), str(assigned), str(allocated), str(init)))
+            #Dumping capacity by raw
+            if self.capacity["cloud"]["type"] == "raw":
+                self.logger.info('')
+                columns = min(len(self.calc_res_props), len(self.calc_res_props_labels))
+                column_format = "\t{:25.25s}" + ("{:>10s}" * columns)
+                self.logger.info(column_format.format("Capacity", *[label for label in self.calc_res_props_labels[:columns]]))
+                for status in ["free", "reserved", "assigned", "allocated", "init"]:
+                    self.logger.info(column_format.format(
+                        status.capitalize(),
+                        *[str(self.capacity["cloud"]["raw"][status].get(prop, 0)) for prop in self.calc_res_props][:columns]))
+
+        if "edge" in self.capacity:
+            self.logger.info('Edge:')
+            #Dumping edge instances:
+            column_format = "\t{:25.25s}" + ("{:>10s}" * len(self.calc_res_props))
+            self.logger.info(column_format.format("Capacities", *[label for label in self.calc_res_props_labels]))
+            for act_instance, act_instance_data in self.capacity["edge"]["capacities"].items():
+                self.logger.info(column_format.format(
+                    act_instance.upper(),
+                    *[str(act_instance_data.get(prop, 0)) for prop in self.calc_res_props]))
+
+            #Dumping edge status
             self.logger.info('')
             column_format = "\t{:25.25s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}"
-            self.logger.info(column_format.format("Capacity", "Free", "Reserved", "Assigned", "Allocated", "Init"))
-            for act_flavor_type, act_flavor_amount in self.capacity["cloud"]["flavour"]["init"].items():
-                free = self.capacity["cloud"]["flavour"]["free"].get(act_flavor_type, 0)
-                reserved = self.capacity["cloud"]["flavour"]["reserved"].get(act_flavor_type, 0)
-                assigned = self.capacity["cloud"]["flavour"]["assigned"].get(act_flavor_type, 0)
-                allocated = self.capacity["cloud"]["flavour"]["allocated"].get(act_flavor_type, 0)
-                init = self.capacity["cloud"]["flavour"]["init"].get(act_flavor_type, 0)
-                self.logger.info(column_format.format(act_flavor_type.upper(), str(free), \
-                                                      str(reserved), str(assigned), str(allocated), str(init)))
-        #Dumping capacity by raw
-        if self.capacity["cloud"]["type"] == "raw":
-            self.logger.info('')
-            columns = min(len(self.calc_res_props), len(self.calc_res_props_labels))
-            column_format = "\t{:25.25s}" + ("{:>10s}" * columns)
-            self.logger.info(column_format.format("Capacity", *[label for label in self.calc_res_props_labels[:columns]]))
-            for status in ["free", "reserved", "assigned", "allocated", "init"]:
-                self.logger.info(column_format.format(
-                    status.capitalize(),
-                    *[str(self.capacity["cloud"]["raw"][status].get(prop, 0)) for prop in self.calc_res_props][:columns]))
-                
+            self.logger.info(column_format.format("Instances", "Free", "Reserved", "Assigned", "Allocated", "Init"))
+            for instance in self.capacity["edge"]["capacities"].keys():
+                instance_data = self.capacity["edge"]["instances"]
+                free = instance_data["free"].get(instance, 0)
+                reserved = instance_data["reserved"].get(instance, 0)
+                assigned = instance_data["assigned"].get(instance, 0)
+                allocated = instance_data["allocated"].get(instance, 0)
+                init = instance_data["init"].get(instance, 0)
+                self.logger.info(column_format.format(instance.upper(), str(free), \
+                                                    str(reserved), str(assigned), str(allocated), str(init)))
+
         #Dumping swarms and reservations
         def _printaline(SwarmID='', MSID='', FlavourID='', State='', Count=''):
             self.logger.info(f"\t{SwarmID:15s} {MSID:15s} {FlavourID:20s} {State:10s}{Count:>5s}")

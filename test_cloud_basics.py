@@ -15,7 +15,7 @@ if __name__ == "__main__":
         'two': "lambda vals: ((vals['host.num-cpus'] >= 2) and (vals['host.mem-size'] >= 4))"
     }
     """
-    matching_cloud_flavors = capreg.calculate_matching_cloud_flavors(requirements)
+    matching_resources = capreg.calculate_matching_resources(requirements)
     """
     {
         'one': ['m2-medium-sztaki'], 
@@ -23,17 +23,20 @@ if __name__ == "__main__":
     }
     """
     swarmid="swarm123"
-    for ms, matching_flavors in matching_cloud_flavors.items():
-        for flavor_name in matching_flavors:
-            print(f"                                Calculating available instances for MS '{ms}' with matching cloud flavor '{flavor_name}'")
-            available_instances = capreg.calculate_available_instances_for_cloud_flavour(flavor_name,3)
-            capreg.resource_state_init_amount(swarmid, ms, "cloud", flavor_name, "free", available_instances)
+    for ms, matching_resources in matching_resources.items():
+        for resource in matching_resources:
+            res_type = list(resource.keys())[0]
+            res_name = resource[res_type]
+            print(f"                                Calculating available instances for MS '{ms}' with matching cloud flavor '{res_name}'")
+            available_instances = capreg.calculate_available_instances_of_resources(res_type, res_name, 3)
+            print(f"\tAvailable instances '{res_name}': {available_instances}")
+            capreg.resource_state_init_amount(swarmid, ms, res_type, res_name, "free", available_instances)
             if available_instances > 2:
-                capreg.resource_state_change(swarmid, ms, "cloud", flavor_name, available_instances, "free", "reserved")
+                capreg.resource_state_change(swarmid, ms, res_type, res_name, available_instances, "free", "reserved")
                 capreg.dump_capacity_registry_info()
-                capreg.resource_state_change(swarmid, ms, "cloud", flavor_name, available_instances-1, "reserved", "assigned")
+                capreg.resource_state_change(swarmid, ms, res_type, res_name, available_instances-1, "reserved", "assigned")
                 capreg.dump_capacity_registry_info()
-                capreg.resource_state_change(swarmid, ms, "cloud", flavor_name, available_instances-2, "assigned", "allocated")
+                capreg.resource_state_change(swarmid, ms, res_type, res_name, available_instances-2, "assigned", "allocated")
                 capreg.dump_capacity_registry_info()
 
 
