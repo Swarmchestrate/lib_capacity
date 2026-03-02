@@ -12,7 +12,7 @@ from app_req import AppReq
 """
 Data structure of the capacity registry:
 capacity = {
-    "swarm": {
+    "swarms": {
         <swarmid>: {
             "nodes": {
                 <node_name>: {
@@ -161,7 +161,8 @@ class SwChCapacityRegistry:
     def initialize(self, init_capacity: dict):
         """Initializes a capacity
         """
-        self.capacity["swarm"] = dict()
+        self.capacity["swarms"] = dict()
+        self.capacity["offers"] = dict()
 
         if "flavour" in init_capacity:
             self.capacity["cloud"] = dict()
@@ -261,19 +262,19 @@ class SwChCapacityRegistry:
         
     def resource_state_init_amount(self, swarmid: str, msid: str, restype: str, resid: str, state: str, amount: int):
         self.logger.debug(f"Initializing resource amount: '{swarmid}', '{msid}', '{restype}', '{resid}', '{state}', {amount}")
-        self.capacity["swarm"].setdefault(swarmid, dict())
-        self.capacity["swarm"][swarmid].setdefault(msid, dict())
-        self.capacity["swarm"][swarmid][msid].setdefault(restype, dict())
+        self.capacity["swarms"].setdefault(swarmid, dict())
+        self.capacity["swarms"][swarmid].setdefault(msid, dict())
+        self.capacity["swarms"][swarmid][msid].setdefault(restype, dict())
         if restype == "cloud":
-            rstate = self.capacity["swarm"][swarmid][msid][restype].setdefault(resid, {"free": 0, "reserved": 0, "assigned": 0, "allocated": 0})
+            rstate = self.capacity["swarms"][swarmid][msid][restype].setdefault(resid, {"free": 0, "reserved": 0, "assigned": 0, "allocated": 0})
             rstate[state] = amount
         if restype == "edge":
-            rstate = self.capacity["swarm"][swarmid][msid][restype].setdefault(resid, {"free": 1})
+            rstate = self.capacity["swarms"][swarmid][msid][restype].setdefault(resid, {"free": 1})
             rstate[state] = amount
 
     def resource_state_change(self, swarmid: str, msid: str, restype: str, resid: str, count: int, from_state: str, to_state: str) -> int:
         self.logger.debug(f"Changing state: '{swarmid}', '{msid}', '{restype}', '{resid}', {count}, '{from_state}', '{to_state}'")
-        rstate = self.capacity["swarm"][swarmid][msid][restype][resid]
+        rstate = self.capacity["swarms"][swarmid][msid][restype][resid]
         if rstate[from_state] < count:
             self.logger.warning(f"Trying to change state of resource '{resid}' in swarm '{swarmid}', ms '{msid}', type '{restype}' from state '{from_state}' with count {count}, but only {rstate[from_state]} is available.")
             return None
@@ -293,6 +294,66 @@ class SwChCapacityRegistry:
         else:
             self.logger.error(f"Unknown resource type '{restype}' for state change.")
         return count
+    
+    def resource_set_deployed(self, swarmid: str, msid: str, restype: str, resid: str, count: int):
+        self.logger.debug(f"Setting resource as deployed: '{swarmid}', '{msid}', '{restype}', '{resid}', {count}")
+        rstate = self.capacity["swarms"][swarmid][msid][restype][resid]
+        if rstate["assigned"] < count:
+            self.logger.warning(f"Trying to set resource '{resid}' in swarm '{swarmid}', ms '{msid}', type '{restype}' as deployed with count {count}, but only {rstate['assigned']} is assigned.")
+            return None
+        else:
+            rstate["assigned"] -= count
+            rstate["allocated"] += count
+        if restype == "cloud":   
+            type = self.capacity["cloud"]["type"]
+            if type == "flavour":
+                self.capacity["cloud"][type]["assigned"][resid] -= count
+                self.capacity["cloud"][type]["allocated"][resid] += count
+            if type == "raw":
+                for prop in self.calc_res_props:
+                    self.capacity["cloud"]["raw"]["assigned"][prop] -= (self.capacity["cloud"]["flavours"][resid][prop] * count)
+                    self.capacity["cloud"]["raw"]["allocated"][prop] += (self.capacity["cloud"]["flavours"][resid][prop] * count)
+        else:
+            self.logger.error(f"Unknown resource type '{restype}' for setting deployed.")
+        return count
+
+    def resource_set_undeployed(self, swarmid: str, msid: str, restype: str, resid: str, count: int):
+        self.logger.debug(f"Setting resource as undeployed: '{swarmid}', '{msid}', '{restype}', '{resid}', {count}")
+        rstate = self.capacity["swarms"][swarmid][msid][restype][resid]
+        if rstate["allocated"] < count:
+            self.logger.warning(f"Trying to set resource '{resid}' in swarm '{swarmid}', ms '{msid}', type '{restype}' as undeployed with count {count}, but only {rstate['allocated']} is allocated.")
+            return None
+        else:
+            rstate["assigned"] += count
+            rstate["allocated"] -= count
+        if restype == "cloud":   
+            type = self.capacity["cloud"]["type"]
+            if type == "flavour":
+                self.capacity["cloud"][type]["assigned"][resid] += count
+                self.capacity["cloud"][type]["allocated"][resid] -= count
+            if type == "raw":
+                for prop in self.calc_res_props:
+                    self.capacity["cloud"]["raw"]["assigned"][prop] += (self.capacity["cloud"]["flavours"][resid][prop] * count)
+                    self.capacity["cloud"]["raw"]["allocated"][prop] -= (self.capacity["cloud"]["flavours"][resid][prop] * count)
+        else:
+            self.logger.error(f"Unknown resource type '{restype}' for setting undeployed.")
+        return count
+
+    def resource_set_get_from_offer(self, offerid: str, offer: list | dict):
+        if offerid == "colocated":
+            self.logger.warning(f"Offerid '{offerid}' is a colocation.")
+            return None
+        offers = list([offer]) if isinstance(offer, dict) else offer
+        res_set = dict()
+        res_set['swarmid'] = offer["ids"]["swarm_id"]
+        res_set['msid'] = offer["ids"]["ms_id"]
+        res_set['resid'] = offer["ids"]["res_id"]
+        res_set['restype'] = offer["ids"]["res_type"]
+        res_set['count'] = len(offers) if isinstance(offer, list) else 1
+        return res_set
+    
+    def resource_set_query_all(self, swarmid: str, msid: str=None):
+        return copy.deepcopy(self.capacity.get("swarms", {}).get(swarmid, {}).get(msid, {}) if msid else self.capacity.get("swarms", {}).get(swarmid, {}))
     
     def resource_offer_generate(self, swarmid: str, sat_filename: str):
         import random
@@ -353,11 +414,16 @@ class SwChCapacityRegistry:
                 for col_node in reqs[msid]["colocated"]:
                     offers[col_node]= dict({"colocated": msid})
         self.logger.debug(f"Generating offer for swarm '{swarmid}' with requirements from '{sat_filename}' finished.")
+        self.capacity["offers"]=dict()
+        self.capacity["offers"][swarmid]=offers
         return offers
     
-    def resource_offer_accepted(self, offerid: str, offer: list | dict):
+    def resource_offer_query_all(self, swarmid: str):
+        return copy.deepcopy(self.capacity.get("offers", {}).get(swarmid, {}))
+
+    def resource_offer_accept(self, offerid: str, offer: list | dict):
         if offerid == "colocated":
-            self.logger.warning(f"Offer '{offerid}' is a colocation, skipping state change.")
+            self.logger.warning(f"Offerid '{offerid}' is a colocation, skipping state change.")
             return True
         offers = list([offer]) if isinstance(offer, dict) else offer
         for offer in offers:
@@ -372,23 +438,36 @@ class SwChCapacityRegistry:
                 return False
         return True
 
-    def resource_offer_rejected(self, offerid: str, offer: list | dict):
+    def resource_offer_reject(self, offerid: str, offer: list | dict):
         if offerid == "colocated":
-            self.logger.warning(f"Offer '{offerid}' is a colocation, skipping state change.")
+            self.logger.warning(f"Offerid '{offerid}' is a colocation, skipping state change.")
             return True
         offers = list([offer]) if isinstance(offer, dict) else offer
         for offer in offers:
-            self.logger.debug(f"Rejecting offer: '{offer}'")
             swarmid = offer["ids"]["swarm_id"]
-            self.logger.debug(f"Rejecting offer '{offerid}' for swarm '{swarmid}'...")
             msid = offer["ids"]["ms_id"]
             resid = offer["ids"]["res_id"]
+            restype = offer["ids"]["res_type"]
             # Change state of resource from reserved to free
-            if self.resource_state_change(swarmid, msid, "cloud", resid, 1, "reserved", "free"):
+            if self.resource_state_change(swarmid, msid, restype, resid, 1, "reserved", "free"):
+                del self.capacity["offers"][swarmid][msid][offerid]
                 self.logger.debug(f"Rejecting offer '{offerid}' for swarm '{swarmid}' succeeded.")
             else:
                 self.logger.error(f"Rejecting offer '{offerid}' for swarm '{swarmid}' failed.")
                 return False
+        return True
+
+    def resources_and_offers_destroy_all(self, swarmid: str):
+        swarm = self.capacity["swarms"].get(swarmid, {})
+        for msid, ms in swarm.items():
+            for restype, resources in ms.items():
+                for resid, rstate in resources.items():
+                    for state, count in rstate.items():
+                        if count > 0:
+                            self.logger.debug(f"Releasing resource: '{swarmid}', '{msid}', '{restype}', '{resid}', '{state}': {count}")
+                            self.resource_state_change(swarmid, msid, restype, resid, count, state, "free")
+        del self.capacity["offers"][swarmid]
+        del self.capacity["swarms"][swarmid]
         return True
 
     def dump_capacity_registry_info(self):
@@ -432,7 +511,7 @@ class SwChCapacityRegistry:
 
         self.logger.info('Swarm:')
         _printaline(SwarmID='Swarm', MSID='Microservice', FlavourID='Flavour/Edge', State='State', Count='Count')
-        for swarmid, swarm in self.capacity["swarm"].items():
+        for swarmid, swarm in self.capacity["swarms"].items():
             _printaline(SwarmID=swarmid)
             for msid, ms in swarm.items():
                 _printaline(MSID=msid)
