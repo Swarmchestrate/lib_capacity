@@ -343,46 +343,12 @@ class SwChCapacityRegistry:
     
     def resource_set_deployed(self, swarmid: str, msid: str, restype: str, resid: str, count: int):
         self.logger.debug(f"Setting resource as deployed: '{swarmid}', '{msid}', '{restype}', '{resid}', {count}")
-        rstate = self.capacity["swarms"][swarmid][msid][restype][resid]
-        if rstate["assigned"] < count:
-            self.logger.warning(f"Trying to set resource '{resid}' in swarm '{swarmid}', ms '{msid}', type '{restype}' as deployed with count {count}, but only {rstate['assigned']} is assigned.")
-            return None
-        else:
-            rstate["assigned"] -= count
-            rstate["allocated"] += count
-        if restype == "cloud":   
-            type = self.capacity["cloud"]["type"]
-            if type == "flavour":
-                self.capacity["cloud"][type]["assigned"][resid] -= count
-                self.capacity["cloud"][type]["allocated"][resid] += count
-            if type == "raw":
-                for prop in self.calc_res_props:
-                    self.capacity["cloud"]["raw"]["assigned"][prop] -= (self.capacity["cloud"]["flavours"][resid][prop] * count)
-                    self.capacity["cloud"]["raw"]["allocated"][prop] += (self.capacity["cloud"]["flavours"][resid][prop] * count)
-        else:
-            self.logger.error(f"Unknown resource type '{restype}' for setting deployed.")
+        count = self.resource_state_change(swarmid, msid, restype, resid, count, "assigned", "allocated")        
         return count
 
     def resource_set_undeployed(self, swarmid: str, msid: str, restype: str, resid: str, count: int):
         self.logger.debug(f"Setting resource as undeployed: '{swarmid}', '{msid}', '{restype}', '{resid}', {count}")
-        rstate = self.capacity["swarms"][swarmid][msid][restype][resid]
-        if rstate["allocated"] < count:
-            self.logger.warning(f"Trying to set resource '{resid}' in swarm '{swarmid}', ms '{msid}', type '{restype}' as undeployed with count {count}, but only {rstate['allocated']} is allocated.")
-            return None
-        else:
-            rstate["assigned"] += count
-            rstate["allocated"] -= count
-        if restype == "cloud":   
-            type = self.capacity["cloud"]["type"]
-            if type == "flavour":
-                self.capacity["cloud"][type]["assigned"][resid] += count
-                self.capacity["cloud"][type]["allocated"][resid] -= count
-            if type == "raw":
-                for prop in self.calc_res_props:
-                    self.capacity["cloud"]["raw"]["assigned"][prop] += (self.capacity["cloud"]["flavours"][resid][prop] * count)
-                    self.capacity["cloud"]["raw"]["allocated"][prop] -= (self.capacity["cloud"]["flavours"][resid][prop] * count)
-        else:
-            self.logger.error(f"Unknown resource type '{restype}' for setting undeployed.")
+        count = self.resource_state_change(swarmid, msid, restype, resid, count, "allocated", "assigned")        
         return count
 
     def resource_set_get_from_offer(self, offerid: str, offer: list | dict):
@@ -413,12 +379,14 @@ class SwChCapacityRegistry:
             for resource in matching_resources:
                 resource_type = list(resource.keys())[0]
                 resource_name = resource[resource_type]
+                self.logger.debug(f"AAAAAA '{resource_name}' of type '{resource_type}' for ms '{msid}' with required instance count {instance_count_required}...")
                 available_instances = self.calculate_available_instances_of_resources(resource_type, resource_name, instance_count_required)
                 if available_instances >= instance_count_required:
                     self.resource_state_init_amount(swarmid, msid, resource_type, resource_name, "free", available_instances)
                     self.resource_state_change(swarmid, msid, resource_type, resource_name, available_instances, "free", "reserved")
                     #query provider information for the flavor
                     flavor_or_edge = "flavours" if resource_type == "cloud" else "capacities"
+                    self.logger.debug(f"BBBBBB '{flavor_or_edge}' of type '{resource_type}'...")
                     provider_id = self.capacity[resource_type][flavor_or_edge][resource_name]["resource.provider"]
                     #query characteristics for the flavor
                     characteristic_names = ["pricing.cost",
@@ -454,7 +422,7 @@ class SwChCapacityRegistry:
                                         "swarm_id": swarmid,
                                         "ms_id": msid,
                                         "provider_id": provider_id,
-                                        "res_type": "cloud",
+                                        "res_type": resource_type,
                                         "res_id": resource_name
                                     },
                                     "characteristics": characteristics})
@@ -478,8 +446,9 @@ class SwChCapacityRegistry:
             swarmid = offer["ids"]["swarm_id"]
             msid = offer["ids"]["ms_id"]
             resid = offer["ids"]["res_id"]
+            restype = offer["ids"]["res_type"]
             # Change state of resource from reserved to assigned
-            if self.resource_state_change(swarmid, msid, "cloud", resid, 1, "reserved", "assigned"):
+            if self.resource_state_change(swarmid, msid, restype, resid, 1, "reserved", "assigned"):
                 self.logger.debug(f"Accepting offer '{offerid}' for swarm '{swarmid}' succeeded.")
             else:
                 self.logger.error(f"Failed to change state for resource in offer '{offerid}' for swarm '{swarmid}'")

@@ -3,13 +3,11 @@ import yaml
 import pprint
 
 if __name__ == "__main__":
-    capreg = SwChCapacityRegistry("ra-sztaki-cloud-hu")
-    capreg.initialize_capacity_from_file("sztaki-capacity-raw.yaml")
-    #capreg.initialize_capacity_from_file("sztaki-capacity-flavor.yaml")
+    capreg = SwChCapacityRegistry("ra-fuelics-cloud-hu")
+    capreg.initialize_capacity_from_file("edge-capacity.yaml")
     capreg.dump_capacity_registry_info()
 
-    #sat_filename="BookInfo-simple.yaml"
-    sat_filename="BookInfo.yaml"
+    sat_filename="BookInfo-edge.yaml"
 
     ######################################################
     # TEST1: generating offers and releasing them all
@@ -31,7 +29,7 @@ if __name__ == "__main__":
     # TEST2: partial acceptance and rejection of offers and 
     # marking resources of accepted offers as allocated
     ######################################################
-
+    
     #Generating offers for 'swarm2'
     swarmid="swarm2"
     generated_offers = capreg.resource_offer_generate(swarmid, sat_filename)
@@ -53,11 +51,11 @@ if __name__ == "__main__":
             else:
                 capreg.resource_offer_reject(offerid, offer)
     capreg.dump_capacity_registry_info()
-
+    
     #Marking a set of resources as "allocated" for demonstration purposes
     #NOTE: offers_all will contain only accepted offers, so we select any of them
     swarmid="swarm2"
-    msid="details_v1"
+    msid="one"
     offers_all = capreg.resource_offer_query_all(swarmid)
     #selecting the first offer for the ms for deployment, and marking resources as allocated
     offerid=list(offers_all[msid].keys())[0]
@@ -101,3 +99,4 @@ if __name__ == "__main__":
     swarmid="swarm2"
     capreg.resources_and_offers_destroy_all(swarmid)
     capreg.dump_capacity_registry_info()
+
