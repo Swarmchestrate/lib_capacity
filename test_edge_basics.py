@@ -7,7 +7,7 @@ if __name__ == "__main__":
     capreg.initialize_capacity_from_file("edge-capacity.yaml")
     capreg.dump_capacity_registry_info()
 
-    requirements = capreg.extract_application_requirements_from_SAT("BookInfo-edge.yaml")
+    requirements = capreg.extract_application_requirements_from_SAT_file("BookInfo-edge.yaml")
     matching_resources = capreg.calculate_matching_resources(requirements)
 
     swarmid="swarm1"

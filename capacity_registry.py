@@ -2,10 +2,8 @@
 import copy
 from itertools import count
 import logging
-import uuid
 import yaml
 from sardou import Sardou
-import app_req
 from res_cap import ResCap
 from app_req import AppReq
 
@@ -110,7 +108,7 @@ class SwChCapacityRegistry:
         tosca = Sardou(capacity_description_filename)
         return tosca.get_capacities()
 
-    def extract_application_requirements_from_SAT(self, application_description_filename: str):
+    def extract_application_requirements_from_SAT_file(self, application_description_filename: str):
         self.logger.debug(f"Extracting application requirements from '{application_description_filename}'...")
         tosca = Sardou(application_description_filename)
         self.logger.debug("TOSCA template read from file:\n %s", yaml.dump(tosca.raw._to_dict(), default_flow_style=False)) 
@@ -151,6 +149,20 @@ class SwChCapacityRegistry:
                 self.logger.debug("  %s:  %s (colocated)", col_node, node_name)
     
         return requirements_logic
+
+    def initialize_capacity_by_content(self, content: str):
+        # FIXME: This is a workaround to initialize the capacity registry from content instead of file,
+        # since Sardou currently support reading from physical file. Remove this workaround once Sardou 
+        # is fixed to support reading from content directly.
+        import tempfile
+        CDTtempfile = tempfile.NamedTemporaryFile(prefix='SWCH_CDT_', suffix='.yaml', dir='/tmp')
+        try:
+            with open(CDTtempfile.name, 'w') as f:
+                f.write(content)
+            self.initialize_capacity_from_file(CDTtempfile.name)
+        finally:
+            CDTtempfile.close()
+        return
 
     def initialize_capacity_from_file(self, filename: str):
         tosca_capacity = self.extract_capacity_definitions_from_CDT(filename)
@@ -367,10 +379,21 @@ class SwChCapacityRegistry:
     def resource_set_query_all(self, swarmid: str, msid: str=None):
         return copy.deepcopy(self.capacity.get("swarms", {}).get(swarmid, {}).get(msid, {}) if msid else self.capacity.get("swarms", {}).get(swarmid, {}))
     
-    def resource_offer_generate(self, swarmid: str, sat_filename: str):
+
+    def resource_offer_generate_by_SAT_content(self, swarmid: str, sat_content: str):
+        import tempfile
+        SATtempfile = tempfile.NamedTemporaryFile(prefix='SWCH_SAT_', suffix='.yaml', dir='/tmp')
+        try:
+            with open(SATtempfile.name, 'w') as f:
+                f.write(sat_content)
+            return self.resource_offer_generate_from_SAT_file(swarmid, SATtempfile.name)
+        finally:
+            SATtempfile.close()
+
+    def resource_offer_generate_from_SAT_file(self, swarmid: str, sat_filename: str):
         import random
         self.logger.debug(f"Generating offer for swarm '{swarmid}' with requirements from '{sat_filename}'...")
-        reqs = self.extract_application_requirements_from_SAT(sat_filename)
+        reqs = self.extract_application_requirements_from_SAT_file(sat_filename)
         matching_resources = self.calculate_matching_resources(reqs)
         offers = dict()
         for msid, matching_resources in matching_resources.items():

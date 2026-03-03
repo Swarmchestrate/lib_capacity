@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     #Generating offers for 'swarm1' 
     swarmid="swarm1"
-    generated_offers = capreg.resource_offer_generate(swarmid, sat_filename)
+    generated_offers = capreg.resource_offer_generate_from_SAT_file(swarmid, sat_filename)
     print("Generated offers:")
     print(yaml.dump(generated_offers))
     capreg.dump_capacity_registry_info()
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     #Generating offers for 'swarm2'
     swarmid="swarm2"
-    generated_offers = capreg.resource_offer_generate(swarmid, sat_filename)
+    generated_offers = capreg.resource_offer_generate_from_SAT_file(swarmid, sat_filename)
     print("Generated offers:")
     pprint.pprint(generated_offers)
     capreg.dump_capacity_registry_info()

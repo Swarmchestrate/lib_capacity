@@ -2,12 +2,24 @@ from capacity_registry import SwChCapacityRegistry
 import yaml
 import pprint
 
+
+capacity_filename="edge-capacity.yaml"
+sat_filename="BookInfo-edge.yaml"
+
 if __name__ == "__main__":
     capreg = SwChCapacityRegistry("ra-fuelics-cloud-hu")
-    capreg.initialize_capacity_from_file("edge-capacity.yaml")
+    
+    #reading capacity by content for demonstration purposes
+    with open(capacity_filename) as stream:
+        try:
+            capacity_content = stream.read()
+        except yaml.YAMLError as exc:
+            print(exc)
+    capreg.initialize_capacity_by_content(capacity_content)
+  
+    #for reading the capacity from file, use the following line instead of the above block
+    #capreg.initialize_capacity_from_file(capacity_filename)
     capreg.dump_capacity_registry_info()
-
-    sat_filename="BookInfo-edge.yaml"
 
     ######################################################
     # TEST1: generating offers and releasing them all
@@ -15,7 +27,16 @@ if __name__ == "__main__":
 
     #Generating offers for 'swarm1' 
     swarmid="swarm1"
-    generated_offers = capreg.resource_offer_generate(swarmid, sat_filename)
+
+    #reading sat requirements by content for demonstration purposes
+    with open(sat_filename) as stream:
+        try:
+            sat_content = stream.read()
+        except yaml.YAMLError as exc:
+            print(exc)
+    generated_offers = capreg.resource_offer_generate_by_SAT_content(swarmid, sat_content)
+
+    #generated_offers = capreg.resource_offer_generate_from_SAT_file(swarmid, sat_filename)
     print("Generated offers:")
     print(yaml.dump(generated_offers))
     capreg.dump_capacity_registry_info()
@@ -32,7 +53,7 @@ if __name__ == "__main__":
     
     #Generating offers for 'swarm2'
     swarmid="swarm2"
-    generated_offers = capreg.resource_offer_generate(swarmid, sat_filename)
+    generated_offers = capreg.resource_offer_generate_from_SAT_file(swarmid, sat_filename)
     print("Generated offers:")
     pprint.pprint(generated_offers)
     capreg.dump_capacity_registry_info()
