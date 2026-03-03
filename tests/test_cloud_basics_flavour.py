@@ -5,24 +5,13 @@ from pathlib import Path
 
 if __name__ == "__main__":
     capreg = SwChCapacityRegistry("ra-sztaki-cloud-hu")
-    capreg.initialize_capacity_from_file("sztaki-capacity-raw.yaml")
-    #capreg.initialize_capacity_from_file("sztaki-capacity-flavor.yaml")
+    #capreg.initialize_capacity_from_file("sztaki-capacity-raw.yaml")
+    capreg.initialize_capacity_from_file("sztaki-capacity-flavor.yaml")
     capreg.dump_capacity_registry_info()
 
     requirements = capreg.extract_application_requirements_from_SAT_file("BookInfo-simple.yaml")
-    """
-    {
-        'one': "lambda vals: ((vals['host.num-cpus'] >= 1) and (vals['host.mem-size'] == 2) and (vals['locality.city'] == 'budapest'))",
-        'two': "lambda vals: ((vals['host.num-cpus'] >= 2) and (vals['host.mem-size'] >= 4))"
-    }
-    """
     matching_resources = capreg.calculate_matching_resources(requirements)
-    """
-    {
-        'one': ['m2-medium-sztaki'], 
-        'two': ['m2-large-sztaki','m2-xlarge-sztaki']
-    }
-    """
+
     swarmid="swarm123"
     for ms, matching_resources in matching_resources.items():
         for resource in matching_resources:

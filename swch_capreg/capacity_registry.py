@@ -88,7 +88,7 @@ class SwChCapacityRegistry:
     # Logger configuration
     logger = logging.getLogger()
     logging.basicConfig(
-        level=logging.INFO, 
+        level=logging.DEBUG, 
         format='(%(asctime)s) %(levelname)s:\t%(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
@@ -282,7 +282,7 @@ class SwChCapacityRegistry:
             if res_name not in self.capacity["cloud"]["flavours"]:
                 return 0
             if self.capacity["cloud"]["type"] == "flavour":
-                available_amount = self.capacity["cloud"]["flavours"]["free"].get(res_name, 0)
+                available_amount = self.capacity["cloud"]["flavour"]["free"].get(res_name, 0)
                 available_instances = min(required_instance, available_amount)
                 self.logger.debug(f"\tFree amount of cloud flavor '{res_name}': {available_amount}")
                 self.logger.debug(f"\tRequired instances of cloud flavor '{res_name}': {required_instance}")
