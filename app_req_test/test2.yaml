@@ -1,7 +1,0 @@
-app1:
-  - host:
-      node_filter:
-        $equal:
-          - $get_property: [host, mem-size]
-          - 4
-        # mem-size == 4

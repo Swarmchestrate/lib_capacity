@@ -1,7 +1,0 @@
-app1:
-  - host:
-      node_filter:
-        $equal:
-          - $get_property: [locality, city]
-          - paris
-        # city == paris
