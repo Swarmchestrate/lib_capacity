@@ -3,16 +3,14 @@ import yaml
 import pprint
 from pathlib import Path
 
-TESTS_DIR = Path(__file__).resolve().parent
-
 if __name__ == "__main__":
     capreg = SwChCapacityRegistry("ra-sztaki-cloud-hu")
-    capreg.initialize_capacity_from_file(str(TESTS_DIR / "sztaki-capacity-raw.yaml"))
+    capreg.initialize_capacity_from_file("sztaki-capacity-raw.yaml")
     #capreg.initialize_capacity_from_file("sztaki-capacity-flavor.yaml")
     capreg.dump_capacity_registry_info()
 
     #sat_filename="BookInfo-simple.yaml"
-    sat_filename = str(TESTS_DIR / "BookInfo.yaml")
+    sat_filename = "BookInfo.yaml"
 
     ######################################################
     # TEST1: generating offers and releasing them all

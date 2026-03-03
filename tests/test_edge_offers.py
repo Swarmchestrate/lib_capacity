@@ -3,10 +3,8 @@ import yaml
 import pprint
 from pathlib import Path
 
-TESTS_DIR = Path(__file__).resolve().parent
-
-capacity_filename = TESTS_DIR / "edge-capacity.yaml"
-sat_filename = TESTS_DIR / "BookInfo-edge.yaml"
+capacity_filename = "edge-capacity.yaml"
+sat_filename = "BookInfo-edge.yaml"
 
 if __name__ == "__main__":
     capreg = SwChCapacityRegistry("ra-fuelics-cloud-hu")

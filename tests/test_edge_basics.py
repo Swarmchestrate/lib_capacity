@@ -3,14 +3,12 @@ import yaml
 import pprint
 from pathlib import Path
 
-TESTS_DIR = Path(__file__).resolve().parent
-
 if __name__ == "__main__":
     capreg = SwChCapacityRegistry("ra-fuelics-cloud-hu")
-    capreg.initialize_capacity_from_file(str(TESTS_DIR / "edge-capacity.yaml"))
+    capreg.initialize_capacity_from_file("edge-capacity.yaml")
     capreg.dump_capacity_registry_info()
 
-    requirements = capreg.extract_application_requirements_from_SAT_file(str(TESTS_DIR / "BookInfo-edge.yaml"))
+    requirements = capreg.extract_application_requirements_from_SAT_file("BookInfo-edge.yaml")
     matching_resources = capreg.calculate_matching_resources(requirements)
 
     swarmid="swarm1"
