@@ -1,9 +1,9 @@
-# lib_capacity
+# swchcapreg
 library to handle capacity registry
 
 ## Python library package
 
-This project is packaged as `swch_capreg`.
+This project is published as `swchcapreg` and imported as `swch_capreg`.
 
 - Public class: `swch_capreg.SwChCapacityRegistry`
 

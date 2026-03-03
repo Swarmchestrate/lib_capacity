@@ -1,6 +1,6 @@
 
 [tool.poetry]
-name = "lib_capacity"
+name = "swchcapreg"
 version = "0.1.0"
 description = "A small library to manage capacity registries (flavors and raw resources)."
 authors = [
