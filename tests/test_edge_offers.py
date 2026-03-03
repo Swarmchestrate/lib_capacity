@@ -1,15 +1,27 @@
-from capacity_registry import SwChCapacityRegistry
+from swch_capreg import SwChCapacityRegistry
 import yaml
 import pprint
+from pathlib import Path
+
+TESTS_DIR = Path(__file__).resolve().parent
+
+capacity_filename = TESTS_DIR / "edge-capacity.yaml"
+sat_filename = TESTS_DIR / "BookInfo-edge.yaml"
 
 if __name__ == "__main__":
-    capreg = SwChCapacityRegistry("ra-sztaki-cloud-hu")
-    capreg.initialize_capacity_from_file("sztaki-capacity-raw.yaml")
-    #capreg.initialize_capacity_from_file("sztaki-capacity-flavor.yaml")
+    capreg = SwChCapacityRegistry("ra-fuelics-cloud-hu")
+    
+    #reading capacity by content for demonstration purposes
+    with open(capacity_filename) as stream:
+        try:
+            capacity_content = stream.read()
+        except yaml.YAMLError as exc:
+            print(exc)
+    capreg.initialize_capacity_by_content(capacity_content)
+  
+    #for reading the capacity from file, use the following line instead of the above block
+    #capreg.initialize_capacity_from_file(capacity_filename)
     capreg.dump_capacity_registry_info()
-
-    #sat_filename="BookInfo-simple.yaml"
-    sat_filename="BookInfo.yaml"
 
     ######################################################
     # TEST1: generating offers and releasing them all
@@ -17,7 +29,16 @@ if __name__ == "__main__":
 
     #Generating offers for 'swarm1' 
     swarmid="swarm1"
-    generated_offers = capreg.resource_offer_generate_from_SAT_file(swarmid, sat_filename)
+
+    #reading sat requirements by content for demonstration purposes
+    with open(sat_filename) as stream:
+        try:
+            sat_content = stream.read()
+        except yaml.YAMLError as exc:
+            print(exc)
+    generated_offers = capreg.resource_offer_generate_by_SAT_content(swarmid, sat_content)
+
+    #generated_offers = capreg.resource_offer_generate_from_SAT_file(swarmid, sat_filename)
     print("Generated offers:")
     print(yaml.dump(generated_offers))
     capreg.dump_capacity_registry_info()
@@ -31,7 +52,7 @@ if __name__ == "__main__":
     # TEST2: partial acceptance and rejection of offers and 
     # marking resources of accepted offers as allocated
     ######################################################
-
+    
     #Generating offers for 'swarm2'
     swarmid="swarm2"
     generated_offers = capreg.resource_offer_generate_from_SAT_file(swarmid, sat_filename)
@@ -53,11 +74,11 @@ if __name__ == "__main__":
             else:
                 capreg.resource_offer_reject(offerid, offer)
     capreg.dump_capacity_registry_info()
-
+    
     #Marking a set of resources as "allocated" for demonstration purposes
     #NOTE: offers_all will contain only accepted offers, so we select any of them
     swarmid="swarm2"
-    msid="details_v1"
+    msid="one"
     offers_all = capreg.resource_offer_query_all(swarmid)
     #selecting the first offer for the ms for deployment, and marking resources as allocated
     offerid=list(offers_all[msid].keys())[0]
@@ -101,3 +122,4 @@ if __name__ == "__main__":
     swarmid="swarm2"
     capreg.resources_and_offers_destroy_all(swarmid)
     capreg.dump_capacity_registry_info()
+

@@ -1,6 +1,6 @@
 import os
 import yaml
-from app_req import AppReq
+from swch_capreg.app_req import AppReq
 
 # Test dictionaries to use for all test cases
 TEST_DICTS = [

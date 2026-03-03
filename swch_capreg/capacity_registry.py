@@ -88,7 +88,7 @@ class SwChCapacityRegistry:
     # Logger configuration
     logger = logging.getLogger()
     logging.basicConfig(
-        level=logging.DEBUG, 
+        level=logging.INFO, 
         format='(%(asctime)s) %(levelname)s:\t%(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
@@ -101,8 +101,9 @@ class SwChCapacityRegistry:
     RESOURCE_TYPES_RAW    = ["cpu", "ram", "disk", "pub_ip"]
     RESOURCE_TYPES_FLAVOR = ["cpu", "ram", "disk"] 
 
-    def __init__(self, ra_id: str):
+    def __init__(self, ra_id: str, logger: logging.Logger | None = None):
         self.ra_id = ra_id
+        self.logger = logger if logger is not None else self.__class__.logger
 
     def extract_capacity_definitions_from_CDT(self, capacity_description_filename: str):
         tosca = Sardou(capacity_description_filename)

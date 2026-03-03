@@ -1,5 +1,5 @@
 
-from res_cap import ResCap
+from swch_capreg.res_cap import ResCap
 import yaml
 import pprint
 

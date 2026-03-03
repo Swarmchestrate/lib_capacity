@@ -1,4 +1,4 @@
-from app_req import AppReq
+from swch_capreg.app_req import AppReq
 import yaml
 
 

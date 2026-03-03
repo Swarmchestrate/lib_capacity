@@ -220,7 +220,7 @@ Prints a human-readable snapshot of cloud/edge capacities and swarm state.
 
 ## Notes
 
-- Demo scripts are available in the repository root (for example `test_cloud_offers.py` and `test_edge_offers.py`).
+- Demo scripts are available in `tests/` (for example `tests/test_cloud_offers.py` and `tests/test_edge_offers.py`).
 - `swch_capreg/methods.py` contains the method-name catalog used for API documentation/discovery.
 - `AppReq` and `ResCap` are internal helper modules used by `SwChCapacityRegistry`.
 
