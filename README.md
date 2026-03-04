@@ -7,6 +7,22 @@ This project is published as `swchcapreg` and imported as `swch_capreg`.
 
 - Public class: `swch_capreg.SwChCapacityRegistry`
 
+## Installation
+
+Requires Python `3.12+`.
+
+Install from package index:
+
+```bash
+pip install swchcapreg==0.1.1
+```
+
+Or install/upgrade to the latest available release:
+
+```bash
+pip install -U swchcapreg
+```
+
 ## Quick start
 
 ```python
@@ -220,7 +236,17 @@ Prints a human-readable snapshot of cloud/edge capacities and swarm state.
 
 ## Notes
 
-- Demo scripts are available in `tests/` (for example `tests/test_cloud_offers.py` and `tests/test_edge_offers.py`).
 - `swch_capreg/methods.py` contains the method-name catalog used for API documentation/discovery.
 - `AppReq` and `ResCap` are internal helper modules used by `SwChCapacityRegistry`.
+
+## Test scripts overview
+
+The following scripts in `tests/` demonstrate end-to-end usage patterns:
+
+- `tests/test_cloud_basics_raw.py`: Cloud basics using raw cloud capacity (`sztaki-capacity-raw.yaml`); demonstrates requirement matching, available-instance calculation, and manual state transitions (`free -> reserved -> assigned -> allocated`).
+- `tests/test_cloud_basics_flavour.py`: Same cloud-basics flow as above, but using flavor-based cloud capacity (`sztaki-capacity-flavor.yaml`).
+- `tests/test_cloud_offers_raw.py`: Cloud offer lifecycle using raw cloud capacity; demonstrates offer generation from SAT file, querying offers, accept/reject offers, deployment/undeployment transitions, and final cleanup.
+- `tests/test_cloud_offers_flavour.py`: Same cloud offer lifecycle scenario as above, but with flavor-based cloud capacity.
+- `tests/test_edge_basics.py`: Edge basics scenario on `edge-capacity.yaml`; demonstrates matching edge resources and manual resource-state transitions for edge placements.
+- `tests/test_edge_offers.py`: Edge offer lifecycle scenario; demonstrates CDT-based initialization by in-memory YAML content and SAT loading by in-memory YAML content, offer generation, accept/reject offers, registering deployment/undeployment, resource-set querying, and cleanup.
 
