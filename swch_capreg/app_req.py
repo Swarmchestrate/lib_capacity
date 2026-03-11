@@ -1,123 +1,9 @@
-import yaml
-import re
-
 class AppReq:
     """
     Class to parse application requirements.
     """    
     def __init__(self):
         pass
-
-    def parse(self, app_req_dict):
-        """
-        Takes app-req as a dictionary and returns a logical expression (as a Python lambda string)
-        where variables and values are extracted from node_filter.
-        Supports $and, $or, $equal, $greater, $smaller, $greater_equal, $smaller_equal for complex nested logic.
-        The generated key for $get_property uses the last two elements of the property path in 'key.subkey' format if possible.
-        """
-        def prop_key(prop_path):
-            if isinstance(prop_path, list) and len(prop_path) >= 2:
-                return f"{prop_path[-2]}.{prop_path[-1]}"
-            elif isinstance(prop_path, list) and len(prop_path) == 1:
-                return str(prop_path[-1])
-            else:
-                return str(prop_path)
-
-        def parse_filter(filt):
-            if isinstance(filt, dict):
-                if '$and' in filt:
-                    subexprs = [parse_filter(sub) for sub in filt['$and']]
-                    return '(' + ' and '.join(subexprs) + ')'
-                if '$or' in filt:
-                    subexprs = [parse_filter(sub) for sub in filt['$or']]
-                    return '(' + ' or '.join(subexprs) + ')'
-                if '$equal' in filt:
-                    eq = filt['$equal']
-                    if (
-                        isinstance(eq, list)
-                        and len(eq) == 2
-                        and isinstance(eq[0], dict)
-                        and '$get_property' in eq[0]
-                    ):
-                        prop_path = eq[0]['$get_property']
-                        var = prop_key(prop_path)
-                        val = eq[1]
-                        if isinstance(val, str):
-                            val_str = repr(val.lower())
-                        else:
-                            val_str = str(val)
-                        return f"(vals[{repr(var)}] == {val_str})"
-                if '$greater' in filt:
-                    gt = filt['$greater']
-                    if (
-                        isinstance(gt, list)
-                        and len(gt) == 2
-                        and isinstance(gt[0], dict)
-                        and '$get_property' in gt[0]
-                    ):
-                        prop_path = gt[0]['$get_property']
-                        var = prop_key(prop_path)
-                        val = gt[1]
-                        return f"(vals[{repr(var)}] > {val})"
-                if '$smaller' in filt:
-                    lt = filt['$smaller']
-                    if (
-                        isinstance(lt, list)
-                        and len(lt) == 2
-                        and isinstance(lt[0], dict)
-                        and '$get_property' in lt[0]
-                    ):
-                        prop_path = lt[0]['$get_property']
-                        var = prop_key(prop_path)
-                        val = lt[1]
-                        return f"(vals[{repr(var)}] < {val})"
-                if '$greater_or_equal' in filt:
-                    ge = filt['$greater_or_equal']
-                    if (
-                        isinstance(ge, list)
-                        and len(ge) == 2
-                        and isinstance(ge[0], dict)
-                        and '$get_property' in ge[0]
-                    ):
-                        prop_path = ge[0]['$get_property']
-                        var = prop_key(prop_path)
-                        val = ge[1]
-                        return f"(vals[{repr(var)}] >= {val})"
-                if '$smaller_or_equal' in filt:
-                    le = filt['$smaller_or_equal']
-                    if (
-                        isinstance(le, list)
-                        and len(le) == 2
-                        and isinstance(le[0], dict)
-                        and '$get_property' in le[0]
-                    ):
-                        prop_path = le[0]['$get_property']
-                        var = prop_key(prop_path)
-                        val = le[1]
-                        return f"(vals[{repr(var)}] <= {val})"
-                # If the filter is a dict with only one key, try to parse that key
-                if len(filt) == 1:
-                    key = next(iter(filt))
-                    return parse_filter(filt[key])
-                return "True"
-            if isinstance(filt, list):
-                subexprs = [parse_filter(sub) for sub in filt]
-                return '(' + ' and '.join(subexprs) + ')'
-            return "True"
-
-        exprs = []
-        for app in app_req_dict:
-            host = app.get('host', {})
-            node_filter = host.get('node_filter', None)
-            if node_filter:
-                exprs.append(parse_filter(node_filter))
-
-        if exprs:
-            logic = ' and '.join(exprs)
-        else:
-            logic = 'True'
-
-        return f"lambda vals: {logic}"
 
     def eval_app_req_with_vars(self, lambda_str, dicts):
         """
@@ -127,15 +13,3 @@ class AppReq:
         """
         func = eval(lambda_str)
         return [func(d) for d in dicts]
-
-    def extract_vars(self, lambda_str):
-        """
-        Extracts variable names used as vals['var'] in the lambda string generated by parse_app_req_params().
-        Returns a set of variable names.
-        """
-        pattern = r"vals\[['\"]([^'\"]+)['\"]\]"
-        return set(re.findall(pattern, lambda_str))
-
-
-
-
