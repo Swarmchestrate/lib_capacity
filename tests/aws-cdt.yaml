@@ -17,7 +17,7 @@ imports:
 node_types:
 
   EC2Base:
-    derived_from: swch:Capacity
+    derived_from: swch:EC2Capacity
     description: >
       An base compute node from the UoW AWS provision
     properties:

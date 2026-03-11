@@ -17,7 +17,7 @@ imports:
 node_types:
 
   OpenStackBase:
-    derived_from: swch:Capacity
+    derived_from: swch:OpenStackCapacity
     description: >
       An base compute node from the SZTAKI provision
     properties:
