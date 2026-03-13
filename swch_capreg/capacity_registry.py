@@ -398,7 +398,8 @@ class SwChCapacityRegistry:
                                         "res_type": resource_type,
                                         "res_id": resource_name
                                     },
-                                    "characteristics": characteristics}))
+                                    "characteristics": characteristics,
+                                    "properties": reqs[msid].get("properties", {})}))
                         offers.setdefault(msid,dict())
                         offers[msid][offerid]=instance_list
                     else:
@@ -413,7 +414,8 @@ class SwChCapacityRegistry:
                                         "res_type": resource_type,
                                         "res_id": resource_name
                                     },
-                                    "characteristics": characteristics})
+                                    "characteristics": characteristics,
+                                    "properties": reqs[msid].get("properties", {})})
             if reqs[msid].get("colocated", []):
                 for col_node in reqs[msid]["colocated"]:
                     offers[col_node]= dict({"colocated": msid})
