@@ -1,7 +1,7 @@
 
 [tool.poetry]
 name = "swchcapreg"
-version = "0.1.1"
+version = "0.1.2"
 description = "A library to manage resources and offers generated from application requirements"
 authors = [
     "Dr. József Kovács <jozsef.kovacs@sztaki.hu>",
@@ -15,7 +15,7 @@ packages = [{ include = "swch_capreg" }]
 [tool.poetry.dependencies]
 python = ">=3.12,<4.0"
 PyYAML = "^6.0"
-Sardou = "^0.8.0"
+Sardou = "^0.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

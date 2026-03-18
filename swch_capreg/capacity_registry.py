@@ -131,12 +131,6 @@ class SwChCapacityRegistry:
 
     def initialize_capacity_from_file(self, filename: str):
         tosca_capacity = self.extract_capacity_definitions_from_CDT(filename)
-        # FIXME: a workaround to test edge capacity handling, 
-        # the next 4 lines must be removed once Sardou is fixed.
-        a_flavor = list(tosca_capacity["flavour"].keys())[0]
-        if tosca_capacity["flavour"].get(a_flavor, {}).get("resource", {}).get("type", "") == "edge":
-            del tosca_capacity["capacity_flavour"]
-            tosca_capacity["edge"] = tosca_capacity.pop("flavour")
         self.logger.debug("Capacity read from file:\n %s", yaml.dump(tosca_capacity, default_flow_style=False))
         self.initialize(init_capacity=tosca_capacity)
         return
@@ -147,20 +141,20 @@ class SwChCapacityRegistry:
         self.capacity["swarms"] = dict()
         self.capacity["offers"] = dict()
 
-        if "flavour" in init_capacity:
+        if "cloud_flavours" in init_capacity:
             self.capacity["cloud"] = dict()
             self.capacity["cloud"]["flavours"] = dict()
             rescap = ResCap()
-            for act_flavor, act_flavor_data in init_capacity["flavour"].items():
+            for act_flavor, act_flavor_data in init_capacity["cloud_flavours"].items():
                 self.capacity["cloud"]["flavours"][act_flavor] = rescap.parse(act_flavor_data)
-            if "capacity_flavour" in init_capacity:
+            if "cloud_capacity_flavour" in init_capacity:
                 self.capacity["cloud"]["type"] = "flavour"
                 self.capacity["cloud"]["flavour"] = dict()
-                self.capacity["cloud"]["flavour"]["init"] = init_capacity.get("capacity_flavour", dict())
-            elif "capacity_raw" in init_capacity:
+                self.capacity["cloud"]["flavour"]["init"] = init_capacity.get("cloud_capacity_flavour", dict())
+            elif "cloud_capacity_raw" in init_capacity:
                 self.capacity["cloud"]["type"] = "raw"
-                #temporary workaround: convert raw capacity values to int if they are not already
-                init_raw_temp = init_capacity.get("capacity_raw", None)
+                #FIXME: temporary workaround: convert raw capacity values to int if they are not already
+                init_raw_temp = init_capacity.get("cloud_capacity_raw", None)
                 init_raw = dict()
                 if init_raw_temp:
                     for key, value in init_raw_temp.items():
@@ -190,11 +184,11 @@ class SwChCapacityRegistry:
                 self.capacity["cloud"][self.capacity["cloud"]["type"]]["assigned"] = init_dict.copy()
                 self.capacity["cloud"][self.capacity["cloud"]["type"]]["allocated"] = init_dict.copy()            
             self.logger.debug("Initialized capacity:\n %s", yaml.dump(self.capacity, default_flow_style=False))
-        if "edge" in init_capacity:
+        if "edge_instances" in init_capacity:
             self.capacity["edge"] = dict()
             self.capacity["edge"]["capacities"] = dict()
             rescap = ResCap()
-            for act_instance, act_instance_data in init_capacity["edge"].items():
+            for act_instance, act_instance_data in init_capacity["edge_instances"].items():
                 self.capacity["edge"]["capacities"][act_instance] = rescap.parse(act_instance_data)
 
             init_dict = self.capacity["edge"]["capacities"].copy()
