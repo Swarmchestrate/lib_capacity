@@ -112,44 +112,8 @@ class SwChCapacityRegistry:
     def extract_application_requirements_from_SAT_file(self, application_description_filename: str):
         self.logger.debug(f"Extracting application requirements from '{application_description_filename}'...")
         tosca = Sardou(application_description_filename)
-        self.logger.debug("TOSCA template read from file:\n %s", yaml.dump(tosca.raw._to_dict(), default_flow_style=False)) 
-        nodes = tosca.raw._to_dict().get('service_template', {}).get('node_templates', {})
-        policies = tosca.raw._to_dict().get('service_template', {}).get('policies', {})
-        self.logger.debug(f"Policies found in TOSCA template: {policies}")
-        #Converting colocation policies to a list of colocation groups, where each group is a list of colocated nodes
-        colocation = [
-            policy_details.get('targets', []) 
-            for policy_item in policies 
-            for policy_details in policy_item.values()
-            if policy_details.get('type') == "swch:Scheduling.Colocation"]
-        #collect requirements skipped for nodes for which any neighbour is already in colocation groups
-        requirements = dict()
-        for node_name, node in nodes.items():
-            #Scanning through all microservices with requirements specified
-            if 'requirements' not in node or node.get("type","") != "swch:Microservice":
-                continue
-            #Finding colocation group for the node, if any
-            cogroup = next((group for group in colocation if node_name in group), [])
-            #Storing requirements for the node if it is not in the same colocation group with any other node with requirements, otherwise skipping it, as requirements of the node will be evaluated together with the requirements of the other nodes in the same colocation group
-            if 'requirements' in node and set(requirements.keys()).isdisjoint(set(cogroup)-set([node_name])):
-                requirements[node_name] = dict()
-                requirements[node_name]["requirements"] = node['requirements']
-                if cogroup:
-                    requirements[node_name]["colocated"] = list(set(cogroup) - set([node_name]))
-        
-        self.logger.debug("Requirement expression and colocation for nodes:")
-        app_req = AppReq()
-        requirements_logic = dict()
-        #Converting requirement expressions to a format suitable for evaluation and storing colocation information for each node with requirements
-        for node_name, reqs in requirements.items():
-            requirements_logic[node_name] = dict()
-            requirements_logic[node_name]["expression"] = app_req.parse(reqs["requirements"])
-            requirements_logic[node_name]["colocated"] = reqs.get("colocated", [])
-            self.logger.debug("  %s:  %s", node_name,requirements_logic[node_name]["expression"])
-            for col_node in requirements_logic[node_name]["colocated"]:
-                self.logger.debug("  %s:  %s (colocated)", col_node, node_name)
-    
-        return requirements_logic
+
+        return tosca.get_requirements()
 
     def initialize_capacity_by_content(self, content: str):
         # FIXME: This is a workaround to initialize the capacity registry from content instead of file,
@@ -434,7 +398,8 @@ class SwChCapacityRegistry:
                                         "res_type": resource_type,
                                         "res_id": resource_name
                                     },
-                                    "characteristics": characteristics}))
+                                    "characteristics": characteristics,
+                                    "properties": reqs[msid].get("properties", {})}))
                         offers.setdefault(msid,dict())
                         offers[msid][offerid]=instance_list
                     else:
@@ -449,7 +414,8 @@ class SwChCapacityRegistry:
                                         "res_type": resource_type,
                                         "res_id": resource_name
                                     },
-                                    "characteristics": characteristics})
+                                    "characteristics": characteristics,
+                                    "properties": reqs[msid].get("properties", {})})
             if reqs[msid].get("colocated", []):
                 for col_node in reqs[msid]["colocated"]:
                     offers[col_node]= dict({"colocated": msid})
