@@ -128,7 +128,7 @@ service_template:
               mem-size: 1000
               disk-size: 10000
 
-    m2-small-sztaki:
+    m2-small:
       type: OpenStackBase
       properties:
         flavor_name: m2.small
@@ -143,7 +143,7 @@ service_template:
           properties:
             consumption: 0.10
 
-    m2-medium-sztaki:
+    m2-medium:
       type: OpenStackBase
       properties:
         flavor_name: m2.medium
@@ -158,7 +158,7 @@ service_template:
           properties:
             consumption: 0.10
 
-    m2-large-sztaki:
+    m2-large:
       type: OpenStackBase
       properties:
         flavor_name: m2.large
