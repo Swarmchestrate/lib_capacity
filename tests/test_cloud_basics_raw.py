@@ -5,8 +5,12 @@ from pathlib import Path
 
 if __name__ == "__main__":
     capreg = SwChCapacityRegistry("ra-sztaki-cloud-hu")
-    capreg.initialize_capacity_from_file("sztaki-capacity-raw.yaml")
-    #capreg.initialize_capacity_from_file("sztaki-capacity-flavor.yaml")
+    filename = "sztaki-capacity-raw.yaml"
+    #filename = "sztaki-capacity-flavor.yaml"
+    with open(filename, "r+") as f:
+        yaml_content = f.read()
+    capreg.initialize_capacity_by_content(yaml_content)
+    
     capreg.dump_capacity_registry_info()
 
     requirements = capreg.extract_application_requirements_from_SAT_file("BookInfo-simple.yaml")

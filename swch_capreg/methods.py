@@ -17,5 +17,7 @@ METHODS: list[str] = [
 	"resource_set_deployed",
 	"resource_set_undeployed",
     "resource_set_query_all",
+	"save_capacity_registry_as_yaml",
+	"load_capacity_registry_from_yaml",
 	"dump_capacity_registry_info"
 ]

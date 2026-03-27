@@ -1,6 +1,5 @@
 
 import copy
-from itertools import count
 import logging
 import yaml
 from sardou import Sardou
@@ -105,32 +104,21 @@ class SwChCapacityRegistry:
         self.ra_id = ra_id
         self.logger = logger if logger is not None else self.__class__.logger
 
-    def extract_capacity_definitions_from_CDT(self, capacity_description_filename: str):
-        tosca = Sardou(capacity_description_filename)
-        return tosca.get_capacities()
-
     def extract_application_requirements_from_SAT_file(self, application_description_filename: str):
         self.logger.debug(f"Extracting application requirements from '{application_description_filename}'...")
         tosca = Sardou(application_description_filename)
-
         return tosca.get_requirements()
 
     def initialize_capacity_by_content(self, content: str):
-        # FIXME: This is a workaround to initialize the capacity registry from content instead of file,
-        # since Sardou currently support reading from physical file. Remove this workaround once Sardou 
-        # is fixed to support reading from content directly.
-        import tempfile
-        CDTtempfile = tempfile.NamedTemporaryFile(prefix='SWCH_CDT_', suffix='.yaml', dir='/tmp')
-        try:
-            with open(CDTtempfile.name, 'w') as f:
-                f.write(content)
-            self.initialize_capacity_from_file(CDTtempfile.name)
-        finally:
-            CDTtempfile.close()
-        return
+        tosca = Sardou(content=content)
+        tosca_capacity = tosca.get_capacities()
+        self.logger.debug("Capacity initialised by content:\n %s", yaml.dump(tosca_capacity, default_flow_style=False))
+        self.initialize(init_capacity=tosca_capacity)
+        return 
 
     def initialize_capacity_from_file(self, filename: str):
-        tosca_capacity = self.extract_capacity_definitions_from_CDT(filename)
+        tosca = Sardou(path=filename)
+        tosca_capacity = tosca.get_capacities()
         self.logger.debug("Capacity read from file:\n %s", yaml.dump(tosca_capacity, default_flow_style=False))
         self.initialize(init_capacity=tosca_capacity)
         return
@@ -470,6 +458,15 @@ class SwChCapacityRegistry:
         del self.capacity["offers"][swarmid]
         del self.capacity["swarms"][swarmid]
         return True
+
+    def save_capacity_registry_as_yaml(self):
+        #Returning capacity registry information in YAML format
+        return yaml.dump(self.capacity, default_flow_style=False)
+
+    def load_capacity_registry_from_yaml(self, yaml_str):
+        #Loading capacity registry information from YAML format
+        self.capacity = yaml.safe_load(yaml_str)
+        return
 
     def dump_capacity_registry_info(self):
         #Dumping capacity registry information in a human-readable format

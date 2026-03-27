@@ -61,6 +61,8 @@ The following methods are the documented API entry points of
 | [`resource_set_undeployed`](#resource_set_undeployedswarmid-str-msid-str-restype-str-resid-str-count-int) | `(swarmid: str, msid: str, restype: str, resid: str, count: int)` | Mark deployed resources as undeployed (`allocated` → `assigned`). |
 | [`resource_set_query_all`](#resource_set_query_allswarmid-str-msid-str--none--none) | `(swarmid: str, msid: str \| None = None)` | Query tracked resource states for a swarm or microservice. |
 | [`resources_and_offers_destroy_all`](#resources_and_offers_destroy_allswarmid-str) | `(swarmid: str)` | Release all resources and delete all offers for a swarm. |
+| [`save_capacity_registry_as_yaml`](#save_capacity_registry_as_yaml) | `()` | Serialize the full capacity registry to YAML string. |
+| [`load_capacity_registry_from_yaml`](#load_capacity_registry_from_yamlyaml_str) | `(yaml_str)` | Load and replace registry state from YAML string. |
 | [`dump_capacity_registry_info`](#dump_capacity_registry_info) | `()` | Print registry snapshot via logger. |
 
 #### `initialize_capacity_by_content(content: str)`
@@ -222,6 +224,28 @@ Releases all tracked resources and removes all offers for a swarm.
 		both resource and offer registries.
 - **Returns**
 	- `True`
+
+[Back to API table](#api-reference-table)
+
+#### `save_capacity_registry_as_yaml()`
+
+Serializes the full in-memory capacity registry to YAML format.
+
+- **Returns**
+	- YAML string representation of `self.capacity`.
+
+[Back to API table](#api-reference-table)
+
+#### `load_capacity_registry_from_yaml(yaml_str)`
+
+Loads registry state from a YAML string.
+
+- **Parameters**
+	- `yaml_str`: YAML document containing a serialized capacity registry.
+- **Behavior**
+	- Replaces current in-memory `self.capacity` with parsed YAML content.
+- **Returns**
+	- `None`
 
 [Back to API table](#api-reference-table)
 
