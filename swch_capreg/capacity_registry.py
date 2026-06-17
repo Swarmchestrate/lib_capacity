@@ -1,5 +1,6 @@
 
 import copy
+import ast
 import logging
 import yaml
 from sardou import Sardou
@@ -103,11 +104,40 @@ class SwChCapacityRegistry:
     def __init__(self, ra_id: str, logger: logging.Logger | None = None):
         self.ra_id = ra_id
         self.logger = logger if logger is not None else self.__class__.logger
+        self.capacity = {}
+
+    def _lowercase_lambda_string_values(self, lambda_expression: str) -> str:
+        if not isinstance(lambda_expression, str):
+            return lambda_expression
+
+        class LowercaseStringConstants(ast.NodeTransformer):
+            def visit_Constant(self, node):
+                if isinstance(node.value, str):
+                    return ast.copy_location(ast.Constant(value=node.value.lower()), node)
+                return node
+
+        try:
+            parsed = ast.parse(lambda_expression, mode="eval")
+            lowered = LowercaseStringConstants().visit(parsed)
+            ast.fix_missing_locations(lowered)
+            return ast.unparse(lowered)
+        except Exception:
+            # Keep original expression if parsing/unparsing fails unexpectedly.
+            return lambda_expression
 
     def extract_application_requirements_from_SAT_file(self, application_description_filename: str):
         self.logger.debug(f"Extracting application requirements from '{application_description_filename}'...")
         tosca = Sardou(application_description_filename)
-        return tosca.get_requirements()
+        reqs = tosca.get_requirements()
+
+        for msid, requirement in reqs.items():
+            expression = requirement.get("expression")
+            if isinstance(expression, str):
+                reqs[msid]["expression"] = self._lowercase_lambda_string_values(expression)
+
+        self.logger.debug(f"Extracted application requirements from '{application_description_filename}':\n {yaml.dump(reqs, default_flow_style=False)}")
+        
+        return reqs
 
     def initialize_capacity_by_content(self, content: str):
         tosca = Sardou(content=content)
